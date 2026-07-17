@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f7f5ef;
+  --ink: #1c2541;
+  --ink-soft: #4a5170;
+  --ledger-line: #d9d4c4;
+  --brass: #a9762f;
+  --brass-soft: #f2e6d0;
+  --forest: #1b4332;
+  --forest-soft: #e3ede8;
+  --rust: #9c3b3b;
+  --rust-soft: #f5e4e0;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ledger-line: var(--ledger-line);
+  --color-brass: var(--brass);
+  --color-brass-soft: var(--brass-soft);
+  --color-forest: var(--forest);
+  --color-forest-soft: var(--forest-soft);
+  --color-rust: var(--rust);
+  --color-rust-soft: var(--rust-soft);
+  --font-serif: Georgia, "Times New Roman", ui-serif, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-serif);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
