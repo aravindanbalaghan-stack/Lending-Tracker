@@ -8,6 +8,11 @@ import {
   putRepayments,
 } from "@/lib/offline/db";
 
+let lastError: string | null = null;
+export function getLastSyncError(): string | null {
+  return lastError;
+}
+
 export async function processOutbox(): Promise<{
   synced: number;
   failed: boolean;
@@ -21,27 +26,42 @@ export async function processOutbox(): Promise<{
   // loan created offline in the same session, so the loan must sync first.
   for (const entry of entries) {
     try {
+      let error: { message: string; code?: string } | null = null;
+
       if (entry.type === "insert_loan") {
-        const { error } = await supabase
+        ({ error } = await supabase
           .from("loans")
-          .insert(entry.payload as Record<string, unknown>);
-        if (error) throw error;
+          .insert(entry.payload as Record<string, unknown>));
       } else if (entry.type === "insert_repayment") {
-        const { error } = await supabase
+        ({ error } = await supabase
           .from("repayments")
-          .insert(entry.payload as Record<string, unknown>);
-        if (error) throw error;
+          .insert(entry.payload as Record<string, unknown>));
       } else if (entry.type === "insert_loans_bulk") {
-        const { error } = await supabase
+        ({ error } = await supabase
           .from("loans")
-          .insert(entry.payload as Record<string, unknown>[]);
-        if (error) throw error;
+          .insert(entry.payload as Record<string, unknown>[]));
       }
+
+      if (error) {
+        // A duplicate-key error (Postgres code 23505) means this exact
+        // record already reached the server on an earlier attempt — e.g.
+        // the insert succeeded but the response was lost before we saw
+        // it. Treat that as synced instead of retrying it forever.
+        const isDuplicate = error.code === "23505";
+        if (!isDuplicate) {
+          lastError = error.message;
+          console.error("Sync failed:", entry.type, error.message);
+          return { synced, failed: true };
+        }
+      } else {
+        lastError = null;
+      }
+
       await removeOutboxEntry(entry.localId);
       synced++;
-    } catch {
-      // Stop here and retry the rest next time — could be offline again,
-      // or a genuine error; either way don't skip ahead out of order.
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "Sync failed.";
+      console.error("Sync failed:", entry.type, err);
       return { synced, failed: true };
     }
   }

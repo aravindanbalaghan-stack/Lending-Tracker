@@ -8,12 +8,13 @@ import {
   useCallback,
 } from "react";
 import { getOutbox, subscribeDb } from "@/lib/offline/db";
-import { syncNow } from "@/lib/offline/sync";
+import { syncNow, getLastSyncError } from "@/lib/offline/sync";
 
 type OfflineContextValue = {
   isOnline: boolean;
   pendingCount: number;
   syncing: boolean;
+  lastError: string | null;
   triggerSync: () => void;
 };
 
@@ -23,6 +24,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const refreshPendingCount = useCallback(async () => {
     const outbox = await getOutbox();
@@ -36,6 +38,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
       await syncNow();
     } finally {
       setSyncing(false);
+      setLastError(getLastSyncError());
       refreshPendingCount();
     }
   }, [refreshPendingCount]);
@@ -69,7 +72,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <OfflineContext.Provider
-      value={{ isOnline, pendingCount, syncing, triggerSync }}
+      value={{ isOnline, pendingCount, syncing, lastError, triggerSync }}
     >
       {children}
     </OfflineContext.Provider>

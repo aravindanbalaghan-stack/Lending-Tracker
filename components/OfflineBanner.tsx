@@ -4,7 +4,8 @@ import { useOffline } from "@/components/OfflineProvider";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function OfflineBanner() {
-  const { isOnline, pendingCount, syncing, triggerSync } = useOffline();
+  const { isOnline, pendingCount, syncing, lastError, triggerSync } =
+    useOffline();
   const { t } = useLanguage();
 
   if (isOnline && pendingCount === 0 && !syncing) return null;
@@ -18,12 +19,19 @@ export default function OfflineBanner() {
       {!isOnline && <span>{t("offline_banner")}</span>}
       {isOnline && syncing && <span>{t("offline_syncing")}</span>}
       {isOnline && !syncing && pendingCount > 0 && (
-        <span>
-          {pendingCount} {t("offline_pending")}{" "}
-          <button onClick={triggerSync} className="underline font-medium">
-            {t("offline_syncNow")}
-          </button>
-        </span>
+        <div>
+          <span>
+            {pendingCount} {t("offline_pending")}{" "}
+            <button onClick={triggerSync} className="underline font-medium">
+              {t("offline_syncNow")}
+            </button>
+          </span>
+          {lastError && (
+            <p className="text-rust mt-0.5">
+              {t("offline_syncError")}: {lastError}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

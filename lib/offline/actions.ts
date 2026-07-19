@@ -37,7 +37,10 @@ export async function createLoanOffline(
   if (typeof navigator !== "undefined" && navigator.onLine) {
     const supabase = createClient();
     const { error } = await supabase.from("loans").insert(loan);
-    if (error) await enqueueOutbox("insert_loan", loan);
+    if (error) {
+      console.error("Loan sync failed, queued for retry:", error.message);
+      await enqueueOutbox("insert_loan", loan);
+    }
   } else {
     await enqueueOutbox("insert_loan", loan);
   }
@@ -62,7 +65,10 @@ export async function createRepaymentOffline(
   if (typeof navigator !== "undefined" && navigator.onLine) {
     const supabase = createClient();
     const { error } = await supabase.from("repayments").insert(repayment);
-    if (error) await enqueueOutbox("insert_repayment", repayment);
+    if (error) {
+      console.error("Repayment sync failed, queued for retry:", error.message);
+      await enqueueOutbox("insert_repayment", repayment);
+    }
   } else {
     await enqueueOutbox("insert_repayment", repayment);
   }

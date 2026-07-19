@@ -90,6 +90,7 @@ export const dictionary = {
     offline_syncing: "Syncing…",
     offline_pending: "change(s) waiting to sync",
     offline_syncNow: "Sync now",
+    offline_syncError: "Last error",
 
     backup_title: "Backup",
     backup_subtitle:
@@ -228,6 +229,7 @@ export const dictionary = {
     offline_syncing: "ஒத்திசைக்கிறது…",
     offline_pending: "மாற்றங்கள் ஒத்திசைவுக்காக காத்திருக்கின்றன",
     offline_syncNow: "இப்போது ஒத்திசை",
+    offline_syncError: "கடைசி பிழை",
 
     backup_title: "காப்புப்பிரதி",
     backup_subtitle:
