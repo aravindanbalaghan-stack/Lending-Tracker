@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createLoansBulkOffline } from "@/lib/offline/actions";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import {
@@ -106,18 +106,7 @@ export default function ImportWizard() {
     setImporting(true);
     setError(null);
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setError("You must be signed in.");
-      setImporting(false);
-      return;
-    }
-
     const rows = mapResult.valid.map((loan) => ({
-      lender_id: user.id,
       borrower_name: loan.borrower_name,
       principal: loan.principal,
       interest_rate: loan.interest_rate,
@@ -128,21 +117,15 @@ export default function ImportWizard() {
       notes: loan.notes,
     }));
 
-    const BATCH_SIZE = 200;
-    let insertedCount = 0;
-    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-      const batch = rows.slice(i, i + BATCH_SIZE);
-      const { error: insertError } = await supabase.from("loans").insert(batch);
-      if (insertError) {
-        setError(insertError.message);
-        setImporting(false);
-        return;
-      }
-      insertedCount += batch.length;
+    const result = await createLoansBulkOffline(rows);
+    setImporting(false);
+
+    if (!result.ok) {
+      setError(result.error ?? "Something went wrong.");
+      return;
     }
 
-    setImported(insertedCount);
-    setImporting(false);
+    setImported(result.count);
     setStep("done");
   }
 

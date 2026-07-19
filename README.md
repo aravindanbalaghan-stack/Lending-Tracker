@@ -7,6 +7,46 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Works offline (latest)
+
+The app now works with no internet connection at all, and catches up
+automatically once you're back online.
+
+**How it works:**
+- Every loan and repayment is written to a local database on your device
+  (IndexedDB) the instant you save it — this happens whether you're
+  online or not, so the UI never waits on the network.
+- If you're online at that moment, it's also pushed to Supabase right
+  away. If you're offline, it's queued.
+- All the pages you use — Dashboard, Borrowers, Repay, Missed, Backup —
+  now read from that same local database, so they display instantly and
+  keep working with zero connection.
+- The moment your device regains internet, a background sync kicks in
+  automatically: queued items are pushed to Supabase in the order they
+  were created (so a repayment always syncs after the loan it belongs
+  to), then fresh data is pulled down.
+- A slim status bar appears at the top whenever you're offline or have
+  unsynced changes waiting — it disappears once everything's caught up.
+  There's also a manual "Sync now" button if you don't want to wait.
+- Previously visited pages also open even with **zero network at all**
+  (not just a slow connection) — a service worker caches the app shell
+  itself, not just the data.
+
+**What this means in practice:** you can be out collecting repayments in
+an area with no signal, keep adding loans and repayments the whole time,
+and everything saves normally. Walk back into coverage and it syncs on
+its own — nothing to remember to do.
+
+**One limitation to know:** since there's no editing feature (only
+adding loans/repayments), there's no possibility of two conflicting
+edits to reconcile — the sync is a simple queue-and-replay, not a full
+conflict-resolution system.
+
+### Testing it yourself
+In Chrome DevTools: **Network tab → Throttling dropdown → Offline**. Add
+a loan or repayment, confirm it appears immediately, then switch back to
+"No throttling" and watch the status bar clear as it syncs.
+
 ## Security
 
 This app handles real money and real people's data, so here's exactly

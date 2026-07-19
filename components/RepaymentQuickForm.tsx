@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createRepaymentOffline } from "@/lib/offline/actions";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function RepaymentQuickForm({
@@ -31,26 +31,15 @@ export default function RepaymentQuickForm({
     }
 
     setLoading(true);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setError("You must be signed in.");
-      setLoading(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from("repayments").insert({
+    const result = await createRepaymentOffline({
       loan_id: loanId,
-      lender_id: user.id,
       amount: amountNum,
       paid_at: new Date(paidAt).toISOString(),
     });
-
     setLoading(false);
-    if (insertError) {
-      setError(insertError.message);
+
+    if (!result.ok) {
+      setError(result.error ?? "Something went wrong.");
       return;
     }
 

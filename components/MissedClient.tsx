@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { formatINR } from "@/lib/calculations";
 import { scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
-import { type MissedLoan } from "@/lib/missed";
+import { findMissedLoans, type LoanForMissedCheck } from "@/lib/missed";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
+import { useLocalData } from "@/lib/offline/useLocalData";
 
 const GROUP_LABEL: Record<ScheduleGroup, TranslationKey> = {
   daily: "borrowers_tabDaily",
@@ -15,13 +15,38 @@ const GROUP_LABEL: Record<ScheduleGroup, TranslationKey> = {
   monthly: "borrowers_tabMonthly",
 };
 
-export default function MissedClient({ loans }: { loans: MissedLoan[] }) {
+export default function MissedClient() {
   const { t } = useLanguage();
-  const router = useRouter();
+  const { loans: allLoans, repayments: allRepayments, loading } =
+    useLocalData();
   const [openLoanId, setOpenLoanId] = useState<string | null>(null);
 
+  const loans = useMemo(() => {
+    const repaymentsByLoanId = new Map<
+      string,
+      { amount: number; paid_at: string }[]
+    >();
+    for (const r of allRepayments) {
+      const list = repaymentsByLoanId.get(r.loan_id) ?? [];
+      list.push({ amount: Number(r.amount), paid_at: r.paid_at });
+      repaymentsByLoanId.set(r.loan_id, list);
+    }
+
+    const forCheck: LoanForMissedCheck[] = allLoans.map((l) => ({
+      id: l.id,
+      borrower_name: l.borrower_name,
+      principal: Number(l.principal),
+      payback_amount: Number(l.payback_amount),
+      collection_schedule: l.collection_schedule,
+      given_at: l.given_at,
+      repayments: repaymentsByLoanId.get(l.id) ?? [],
+    }));
+
+    return findMissedLoans(forCheck);
+  }, [allLoans, allRepayments]);
+
   const grouped = useMemo(() => {
-    const map = new Map<ScheduleGroup, MissedLoan[]>([
+    const map = new Map<ScheduleGroup, typeof loans>([
       ["daily", []],
       ["weekly", []],
       ["monthly", []],
@@ -31,6 +56,8 @@ export default function MissedClient({ loans }: { loans: MissedLoan[] }) {
     }
     return map;
   }, [loans]);
+
+  if (loading) return null;
 
   return (
     <div>
@@ -82,10 +109,7 @@ export default function MissedClient({ loans }: { loans: MissedLoan[] }) {
                       <div className="mt-3">
                         <RepaymentQuickForm
                           loanId={loan.id}
-                          onSaved={() => {
-                            setOpenLoanId(null);
-                            router.refresh();
-                          }}
+                          onSaved={() => setOpenLoanId(null)}
                           onCancel={() => setOpenLoanId(null)}
                         />
                       </div>

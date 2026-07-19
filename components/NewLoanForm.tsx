@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createLoanOffline } from "@/lib/offline/actions";
 import { formatINR, installmentAmount, paybackAmount } from "@/lib/calculations";
 import {
   SCHEDULE_OPTIONS,
@@ -78,19 +78,7 @@ export default function NewLoanForm() {
     }
 
     setLoading(true);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setError("You must be signed in.");
-      setLoading(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from("loans").insert({
-      lender_id: user.id,
+    const result = await createLoanOffline({
       borrower_name: borrowerName.trim(),
       principal: principalNum,
       interest_rate: rateNum,
@@ -100,15 +88,14 @@ export default function NewLoanForm() {
       given_at: new Date(givenAt).toISOString(),
       notes: notes.trim() || null,
     });
+    setLoading(false);
 
-    if (insertError) {
-      setError(insertError.message);
-      setLoading(false);
+    if (!result.ok) {
+      setError(result.error ?? "Something went wrong.");
       return;
     }
 
     router.push(`/borrowers/${encodeURIComponent(borrowerName.trim())}`);
-    router.refresh();
   }
 
   return (

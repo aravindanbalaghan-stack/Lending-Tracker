@@ -3,21 +3,33 @@
 import { useMemo, useState } from "react";
 import { dateKey, formatINR, last15Days } from "@/lib/calculations";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useLocalData } from "@/lib/offline/useLocalData";
 
-export type RepaymentRow = {
+type RepaymentRow = {
   id: string;
   amount: number;
   paid_at: string;
   borrower_name: string;
 };
 
-export default function DashboardClient({ rows }: { rows: RepaymentRow[] }) {
+export default function DashboardClient() {
   const { lang, t } = useLanguage();
+  const { loans, repayments, loading } = useLocalData();
   const days = useMemo(() => last15Days(), []);
   const [selected, setSelected] = useState<string>(days[0]);
   const [rangeDays, setRangeDays] = useState<7 | 15>(15);
 
   const locale = lang === "ta" ? "ta-IN" : "en-IN";
+
+  const rows: RepaymentRow[] = useMemo(() => {
+    const nameByLoanId = new Map(loans.map((l) => [l.id, l.borrower_name]));
+    return repayments.map((r) => ({
+      id: r.id,
+      amount: Number(r.amount),
+      paid_at: r.paid_at,
+      borrower_name: nameByLoanId.get(r.loan_id) ?? "Unknown",
+    }));
+  }, [loans, repayments]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, RepaymentRow[]>();
@@ -36,6 +48,8 @@ export default function DashboardClient({ rows }: { rows: RepaymentRow[] }) {
   );
   const selectedRows = byDay.get(selected) ?? [];
   const selectedTotal = selectedRows.reduce((s, r) => s + r.amount, 0);
+
+  if (loading) return null;
 
   return (
     <div className="space-y-6">

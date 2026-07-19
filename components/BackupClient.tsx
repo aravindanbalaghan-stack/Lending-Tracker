@@ -1,10 +1,38 @@
 "use client";
 
+import { useMemo } from "react";
 import { loansToCsv, loansToJson, downloadTextFile, type BackupLoan } from "@/lib/export";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useLocalData } from "@/lib/offline/useLocalData";
 
-export default function BackupClient({ loans }: { loans: BackupLoan[] }) {
+export default function BackupClient() {
   const { t } = useLanguage();
+  const { loans: allLoans, repayments: allRepayments, loading } =
+    useLocalData();
+
+  const loans: BackupLoan[] = useMemo(() => {
+    const repaymentsByLoanId = new Map<
+      string,
+      { amount: number; paid_at: string }[]
+    >();
+    for (const r of allRepayments) {
+      const list = repaymentsByLoanId.get(r.loan_id) ?? [];
+      list.push({ amount: Number(r.amount), paid_at: r.paid_at });
+      repaymentsByLoanId.set(r.loan_id, list);
+    }
+    return allLoans.map((l) => ({
+      id: l.id,
+      borrower_name: l.borrower_name,
+      principal: Number(l.principal),
+      interest_rate: Number(l.interest_rate),
+      payback_amount: Number(l.payback_amount),
+      installments_count: l.installments_count,
+      collection_schedule: l.collection_schedule,
+      given_at: l.given_at,
+      notes: l.notes,
+      repayments: repaymentsByLoanId.get(l.id) ?? [],
+    }));
+  }, [allLoans, allRepayments]);
 
   function handleCsv() {
     const csv = loansToCsv(loans);
@@ -23,6 +51,8 @@ export default function BackupClient({ loans }: { loans: BackupLoan[] }) {
       "application/json"
     );
   }
+
+  if (loading) return null;
 
   return (
     <div className="max-w-xl">

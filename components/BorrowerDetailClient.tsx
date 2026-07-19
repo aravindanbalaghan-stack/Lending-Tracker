@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { formatINR } from "@/lib/calculations";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
 import { loansToCsv, downloadTextFile } from "@/lib/export";
+import { useLocalData } from "@/lib/offline/useLocalData";
 
 type Repayment = { id: string; amount: number; paid_at: string };
 
-export type LoanWithRepayments = {
+type LoanWithRepayments = {
   id: string;
   principal: number;
   interest_rate: number;
@@ -22,15 +23,39 @@ export type LoanWithRepayments = {
   repayments: Repayment[];
 };
 
-export default function BorrowerDetailClient({
-  borrowerName,
-  loans,
-}: {
-  borrowerName: string;
-  loans: LoanWithRepayments[];
-}) {
+export default function BorrowerDetailClient() {
+  const params = useParams<{ id: string }>();
+  const borrowerName = decodeURIComponent(params.id);
   const { lang, t } = useLanguage();
+  const { loans: allLoans, repayments: allRepayments, loading } =
+    useLocalData();
   const locale = lang === "ta" ? "ta-IN" : "en-IN";
+
+  const loans: LoanWithRepayments[] = useMemo(() => {
+    const repaymentsByLoanId = new Map<string, Repayment[]>();
+    for (const r of allRepayments) {
+      const list = repaymentsByLoanId.get(r.loan_id) ?? [];
+      list.push({ id: r.id, amount: Number(r.amount), paid_at: r.paid_at });
+      repaymentsByLoanId.set(r.loan_id, list);
+    }
+
+    return allLoans
+      .filter((l) => l.borrower_name === borrowerName)
+      .map((l) => ({
+        id: l.id,
+        principal: Number(l.principal),
+        interest_rate: Number(l.interest_rate),
+        payback_amount: Number(l.payback_amount),
+        installments_count: l.installments_count,
+        collection_schedule: l.collection_schedule,
+        given_at: l.given_at,
+        notes: l.notes,
+        repayments: repaymentsByLoanId.get(l.id) ?? [],
+      }))
+      .sort(
+        (a, b) => new Date(b.given_at).getTime() - new Date(a.given_at).getTime()
+      );
+  }, [allLoans, allRepayments, borrowerName]);
 
   function handleDownload() {
     const csv = loansToCsv(
@@ -42,6 +67,8 @@ export default function BorrowerDetailClient({
       "text/csv"
     );
   }
+
+  if (loading) return null;
 
   return (
     <div>
@@ -80,7 +107,6 @@ function LoanCard({
   locale: string;
   t: (key: TranslationKey) => string;
 }) {
-  const router = useRouter();
   const [showForm, setShowForm] = useState(false);
 
   const totalPaid = loan.repayments.reduce((s, r) => s + Number(r.amount), 0);
@@ -160,10 +186,7 @@ function LoanCard({
         ) : (
           <RepaymentQuickForm
             loanId={loan.id}
-            onSaved={() => {
-              setShowForm(false);
-              router.refresh();
-            }}
+            onSaved={() => setShowForm(false)}
             onCancel={() => setShowForm(false)}
           />
         )}

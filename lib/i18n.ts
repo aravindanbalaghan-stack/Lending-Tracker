@@ -86,6 +86,11 @@ export const dictionary = {
     import_tooManyRows: "That file has too many rows for a single import",
     import_fileTooLarge: "That file is too large (max 10MB). Try splitting it into smaller files.",
 
+    offline_banner: "You're offline. Changes are saved on this device and will sync automatically once you're back online.",
+    offline_syncing: "Syncing…",
+    offline_pending: "change(s) waiting to sync",
+    offline_syncNow: "Sync now",
+
     backup_title: "Backup",
     backup_subtitle:
       "Download all your borrowers, loans, and repayment history — keep a copy for yourself, or move to another system.",
@@ -218,6 +223,11 @@ export const dictionary = {
     import_downloadSample: "எதிர்பார்க்கப்படும் வடிவமைப்பை காண மாதிரி CSV-ஐ பதிவிறக்கவும்",
     import_tooManyRows: "இந்த கோப்பில் அதிக வரிசைகள் உள்ளன",
     import_fileTooLarge: "கோப்பு மிகப் பெரியது (அதிகபட்சம் 10MB). சிறிய கோப்புகளாகப் பிரிக்கவும்.",
+
+    offline_banner: "நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். மாற்றங்கள் இந்த சாதனத்தில் சேமிக்கப்பட்டு, மீண்டும் இணையம் வரும்போது தானாக ஒத்திசைக்கப்படும்.",
+    offline_syncing: "ஒத்திசைக்கிறது…",
+    offline_pending: "மாற்றங்கள் ஒத்திசைவுக்காக காத்திருக்கின்றன",
+    offline_syncNow: "இப்போது ஒத்திசை",
 
     backup_title: "காப்புப்பிரதி",
     backup_subtitle:

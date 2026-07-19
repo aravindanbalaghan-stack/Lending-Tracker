@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { formatINR } from "@/lib/calculations";
 import { scheduleGroup, WEEKDAYS } from "@/lib/schedule";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
+import { useLocalData } from "@/lib/offline/useLocalData";
 
-export type RepayLoan = {
+type RepayLoan = {
   id: string;
   borrower_name: string;
   outstanding: number;
@@ -16,11 +16,32 @@ export type RepayLoan = {
   given_at: string;
 };
 
-export default function RepayClient({ loans }: { loans: RepayLoan[] }) {
+export default function RepayClient() {
   const { t } = useLanguage();
-  const router = useRouter();
+  const { loans: allLoans, repayments: allRepayments, loading } =
+    useLocalData();
   const [query, setQuery] = useState("");
   const [openLoanId, setOpenLoanId] = useState<string | null>(null);
+
+  const loans: RepayLoan[] = useMemo(() => {
+    const paidByLoanId = new Map<string, number>();
+    for (const r of allRepayments) {
+      paidByLoanId.set(
+        r.loan_id,
+        (paidByLoanId.get(r.loan_id) ?? 0) + Number(r.amount)
+      );
+    }
+    return allLoans
+      .map((l) => ({
+        id: l.id,
+        borrower_name: l.borrower_name,
+        outstanding: Number(l.payback_amount) - (paidByLoanId.get(l.id) ?? 0),
+        collection_schedule: l.collection_schedule,
+        given_at: l.given_at,
+      }))
+      .filter((l) => l.outstanding > 0)
+      .sort((a, b) => a.borrower_name.localeCompare(b.borrower_name));
+  }, [allLoans, allRepayments]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -49,6 +70,8 @@ export default function RepayClient({ loans }: { loans: RepayLoan[] }) {
     sections.weeklyByDay.length > 0 ||
     sections.monthly.length > 0;
 
+  if (loading) return null;
+
   return (
     <div>
       <h1 className="font-serif text-2xl text-ink mb-1">{t("repay_title")}</h1>
@@ -76,10 +99,7 @@ export default function RepayClient({ loans }: { loans: RepayLoan[] }) {
               items={sections.daily}
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
-              onSaved={() => {
-                setOpenLoanId(null);
-                router.refresh();
-              }}
+              onSaved={() => setOpenLoanId(null)}
               t={t}
             />
           )}
@@ -90,10 +110,7 @@ export default function RepayClient({ loans }: { loans: RepayLoan[] }) {
               items={items}
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
-              onSaved={() => {
-                setOpenLoanId(null);
-                router.refresh();
-              }}
+              onSaved={() => setOpenLoanId(null)}
               t={t}
             />
           ))}
@@ -103,10 +120,7 @@ export default function RepayClient({ loans }: { loans: RepayLoan[] }) {
               items={sections.monthly}
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
-              onSaved={() => {
-                setOpenLoanId(null);
-                router.refresh();
-              }}
+              onSaved={() => setOpenLoanId(null)}
               t={t}
             />
           )}

@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { formatINR } from "@/lib/calculations";
-import { WEEKDAYS, type ScheduleGroup } from "@/lib/schedule";
+import { WEEKDAYS, scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
+import { useLocalData } from "@/lib/offline/useLocalData";
 
-export type BorrowerSummary = {
+type BorrowerSummary = {
   name: string;
   totalGiven: number;
   outstanding: number;
@@ -22,15 +23,66 @@ const TABS: { key: ScheduleGroup; labelKey: TranslationKey }[] = [
   { key: "monthly", labelKey: "borrowers_tabMonthly" },
 ];
 
-export default function BorrowersClient({
-  borrowers,
-}: {
-  borrowers: BorrowerSummary[];
-}) {
+export default function BorrowersClient() {
   const { t } = useLanguage();
+  const { loans, repayments, loading } = useLocalData();
   const [activeTab, setActiveTab] = useState<ScheduleGroup>("daily");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+
+  const borrowers: BorrowerSummary[] = useMemo(() => {
+    const paidByLoanId = new Map<string, number>();
+    for (const r of repayments) {
+      paidByLoanId.set(
+        r.loan_id,
+        (paidByLoanId.get(r.loan_id) ?? 0) + Number(r.amount)
+      );
+    }
+
+    const grouped = new Map<
+      string,
+      {
+        totalGiven: number;
+        totalOwed: number;
+        totalPaid: number;
+        loanCount: number;
+        latestGivenAt: string;
+        latestSchedule: string;
+      }
+    >();
+
+    for (const loan of loans) {
+      const paid = paidByLoanId.get(loan.id) ?? 0;
+      const existing = grouped.get(loan.borrower_name) ?? {
+        totalGiven: 0,
+        totalOwed: 0,
+        totalPaid: 0,
+        loanCount: 0,
+        latestGivenAt: loan.given_at,
+        latestSchedule: loan.collection_schedule,
+      };
+      existing.totalGiven += Number(loan.principal);
+      existing.totalOwed += Number(loan.payback_amount);
+      existing.totalPaid += paid;
+      existing.loanCount += 1;
+      if (loan.given_at >= existing.latestGivenAt) {
+        existing.latestGivenAt = loan.given_at;
+        existing.latestSchedule = loan.collection_schedule;
+      }
+      grouped.set(loan.borrower_name, existing);
+    }
+
+    return Array.from(grouped.entries())
+      .map(([name, stats]) => ({
+        name,
+        totalGiven: stats.totalGiven,
+        outstanding: stats.totalOwed - stats.totalPaid,
+        loanCount: stats.loanCount,
+        schedule: stats.latestSchedule,
+        group: scheduleGroup(stats.latestSchedule),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [loans, repayments]);
 
   const counts = useMemo(() => {
     const c: Record<ScheduleGroup, number> = { daily: 0, weekly: 0, monthly: 0 };
@@ -58,6 +110,8 @@ export default function BorrowersClient({
       return b.name.toLowerCase().includes(q);
     });
   }, [borrowers, activeTab, activeDay, query]);
+
+  if (loading) return null;
 
   return (
     <div>
