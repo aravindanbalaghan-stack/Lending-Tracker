@@ -2,29 +2,37 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createLoansBulkOffline } from "@/lib/offline/actions";
+import {
+  createLoansBulkOffline,
+  createRepaymentsBulkOffline,
+} from "@/lib/offline/actions";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import {
   parseSpreadsheetFile,
   mapRows,
-  SYSTEM_FIELDS,
+  mapPaymentRows,
+  LOAN_FIELDS,
+  PAYMENT_FIELDS,
   type ParsedFile,
   type FieldMapping,
   type MapResult,
-  type SystemFieldKey,
+  type PaymentMapResult,
 } from "@/lib/import";
 import { formatINR, paybackAmount } from "@/lib/calculations";
+import { useLocalData } from "@/lib/offline/useLocalData";
 
+type ImportKind = "loans" | "payments";
 type Step = "upload" | "map" | "preview" | "done";
 
 const MAX_IMPORT_ROWS = 5000;
 
-function guessMapping(headers: string[]): FieldMapping {
+function guessLoanMapping(headers: string[]): FieldMapping {
   const mapping: FieldMapping = {};
   const normalize = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
-  const guesses: Record<SystemFieldKey, string[]> = {
+  const guesses: Record<string, string[]> = {
     borrower_name: ["name", "borrowername", "customer", "customername", "borrower"],
+    borrower_name_ta: ["nametamil", "tamilname", "nameta"],
     principal: ["amount", "principal", "amountgiven", "loanamount", "given"],
     interest_rate: ["interest", "interestrate", "rate"],
     installments_count: ["installments", "installment", "emi", "noofinstallments"],
@@ -32,33 +40,51 @@ function guessMapping(headers: string[]): FieldMapping {
     given_at: ["date", "dategiven", "loandate", "givenon"],
     notes: ["notes", "note", "remarks", "comment", "purpose"],
   };
-
   headers.forEach((header, idx) => {
     const norm = normalize(header);
-    for (const [field, patterns] of Object.entries(guesses) as [
-      SystemFieldKey,
-      string[]
-    ][]) {
+    for (const [field, patterns] of Object.entries(guesses)) {
       if (mapping[field] !== undefined) continue;
-      if (patterns.some((p) => norm.includes(p))) {
-        mapping[field] = idx;
-      }
+      if (patterns.some((p) => norm.includes(p))) mapping[field] = idx;
     }
   });
+  return mapping;
+}
 
+function guessPaymentMapping(headers: string[]): FieldMapping {
+  const mapping: FieldMapping = {};
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
+  const guesses: Record<string, string[]> = {
+    borrower_name: ["name", "borrowername", "customer", "customername", "borrower"],
+    amount: ["amount", "paymentamount", "paid", "received", "collection"],
+    payment_mode: ["mode", "paymentmode", "paymenttype", "method"],
+    paid_at: ["date", "paiddate", "paymentdate", "receiveddate", "collectiondate"],
+  };
+  headers.forEach((header, idx) => {
+    const norm = normalize(header);
+    for (const [field, patterns] of Object.entries(guesses)) {
+      if (mapping[field] !== undefined) continue;
+      if (patterns.some((p) => norm.includes(p))) mapping[field] = idx;
+    }
+  });
   return mapping;
 }
 
 export default function ImportWizard() {
   const { t } = useLanguage();
+  const { loans, repayments } = useLocalData();
+  const [kind, setKind] = useState<ImportKind>("loans");
   const [step, setStep] = useState<Step>("upload");
   const [fileName, setFileName] = useState("");
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
   const [mapping, setMapping] = useState<FieldMapping>({});
-  const [mapResult, setMapResult] = useState<MapResult | null>(null);
+  const [loanMapResult, setLoanMapResult] = useState<MapResult | null>(null);
+  const [paymentMapResult, setPaymentMapResult] =
+    useState<PaymentMapResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(0);
+
+  const fields = kind === "loans" ? LOAN_FIELDS : PAYMENT_FIELDS;
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -82,7 +108,11 @@ export default function ImportWizard() {
       }
       setParsed(result);
       setFileName(file.name);
-      setMapping(guessMapping(result.headers));
+      setMapping(
+        kind === "loans"
+          ? guessLoanMapping(result.headers)
+          : guessPaymentMapping(result.headers)
+      );
       setStep("map");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not read that file.");
@@ -91,70 +121,142 @@ export default function ImportWizard() {
 
   function handleContinueToPreview() {
     if (!parsed) return;
-    if (mapping.borrower_name === undefined || mapping.principal === undefined) {
+    const requiredOk =
+      kind === "loans"
+        ? mapping.borrower_name !== undefined && mapping.principal !== undefined
+        : mapping.borrower_name !== undefined && mapping.amount !== undefined;
+    if (!requiredOk) {
       setError(t("import_needRequired"));
       return;
     }
     setError(null);
-    const result = mapRows(parsed.rows, mapping);
-    setMapResult(result);
+
+    if (kind === "loans") {
+      setLoanMapResult(mapRows(parsed.rows, mapping));
+      setPaymentMapResult(null);
+    } else {
+      setPaymentMapResult(
+        mapPaymentRows(parsed.rows, mapping, loans, repayments)
+      );
+      setLoanMapResult(null);
+    }
     setStep("preview");
   }
 
   async function handleConfirmImport() {
-    if (!mapResult || mapResult.valid.length === 0) return;
     setImporting(true);
     setError(null);
 
-    const rows = mapResult.valid.map((loan) => ({
-      borrower_name: loan.borrower_name,
-      principal: loan.principal,
-      interest_rate: loan.interest_rate,
-      payback_amount: paybackAmount(loan.principal, loan.interest_rate),
-      installments_count: loan.installments_count,
-      collection_schedule: loan.collection_schedule,
-      given_at: loan.given_at,
-      notes: loan.notes,
-    }));
-
-    const result = await createLoansBulkOffline(rows);
-    setImporting(false);
-
-    if (!result.ok) {
-      setError(result.error ?? "Something went wrong.");
-      return;
+    if (kind === "loans" && loanMapResult) {
+      const rows = loanMapResult.valid.map((loan) => ({
+        borrower_name: loan.borrower_name,
+        borrower_name_ta: loan.borrower_name_ta,
+        principal: loan.principal,
+        interest_rate: loan.interest_rate,
+        payback_amount: paybackAmount(loan.principal, loan.interest_rate),
+        installments_count: loan.installments_count,
+        collection_schedule: loan.collection_schedule,
+        given_at: loan.given_at,
+        notes: loan.notes,
+      }));
+      const result = await createLoansBulkOffline(rows);
+      setImporting(false);
+      if (!result.ok) {
+        setError(result.error ?? "Something went wrong.");
+        return;
+      }
+      setImported(result.count);
+      setStep("done");
+    } else if (kind === "payments" && paymentMapResult) {
+      const rows = paymentMapResult.valid.map((p) => ({
+        loan_id: p.loan_id,
+        amount: p.amount,
+        payment_mode: p.payment_mode,
+        paid_at: p.paid_at,
+      }));
+      const result = await createRepaymentsBulkOffline(rows);
+      setImporting(false);
+      if (!result.ok) {
+        setError(result.error ?? "Something went wrong.");
+        return;
+      }
+      setImported(result.count);
+      setStep("done");
+    } else {
+      setImporting(false);
     }
-
-    setImported(result.count);
-    setStep("done");
   }
 
   function reset() {
     setStep("upload");
     setParsed(null);
     setMapping({});
-    setMapResult(null);
+    setLoanMapResult(null);
+    setPaymentMapResult(null);
     setError(null);
     setImported(0);
   }
 
+  function switchKind(next: ImportKind) {
+    setKind(next);
+    reset();
+  }
+
   function downloadSampleCsv() {
-    const header = "Name,Amount,Interest Rate,Installments,Schedule,Date Given,Notes";
-    const sample = "Ramesh Kumar,10000,25,1,Daily,2026-07-01,";
+    const header =
+      kind === "loans"
+        ? "Name,Name (Tamil),Amount,Interest Rate,Installments,Schedule,Date Given,Notes"
+        : "Name,Amount,Mode,Date Paid";
+    const sample =
+      kind === "loans"
+        ? "Ramesh Kumar,,10000,25,10,Daily,2026-07-01,"
+        : "Ramesh Kumar,500,Cash,2026-07-15";
     const csv = `${header}\n${sample}\n`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "kanakku-book-sample.csv";
+    a.download = `kanakku-book-${kind}-sample.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
+  const validCount =
+    kind === "loans"
+      ? loanMapResult?.valid.length ?? 0
+      : paymentMapResult?.valid.length ?? 0;
+  const invalidRows =
+    kind === "loans" ? loanMapResult?.invalid ?? [] : paymentMapResult?.invalid ?? [];
+
   return (
     <div className="max-w-xl">
       <h1 className="font-serif text-2xl text-ink mb-1">{t("import_title")}</h1>
-      <p className="text-sm text-ink-soft mb-6">{t("import_subtitle")}</p>
+      <p className="text-sm text-ink-soft mb-4">{t("import_subtitle")}</p>
+
+      <div className="flex rounded-md border border-ledger-line overflow-hidden text-sm mb-6 w-fit">
+        <button
+          onClick={() => switchKind("loans")}
+          className={`px-4 py-2 transition ${
+            kind === "loans" ? "bg-forest text-white" : "bg-white text-ink-soft"
+          }`}
+        >
+          {t("import_kindLoans")}
+        </button>
+        <button
+          onClick={() => switchKind("payments")}
+          className={`px-4 py-2 transition ${
+            kind === "payments" ? "bg-forest text-white" : "bg-white text-ink-soft"
+          }`}
+        >
+          {t("import_kindPayments")}
+        </button>
+      </div>
+
+      {kind === "payments" && step === "upload" && (
+        <p className="text-xs text-ink-soft mb-4 bg-brass-soft rounded-md px-3 py-2">
+          {t("import_paymentsHint")}
+        </p>
+      )}
 
       {error && (
         <p className="text-sm text-rust mb-4 bg-rust-soft rounded-md px-3 py-2">
@@ -191,7 +293,7 @@ export default function ImportWizard() {
             {fileName} · {parsed.rows.length} {t("import_rowsFound")}
           </p>
           <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
-            {SYSTEM_FIELDS.map((field) => (
+            {fields.map((field) => (
               <div
                 key={field.key}
                 className="flex items-center justify-between px-4 py-3 gap-3"
@@ -235,22 +337,22 @@ export default function ImportWizard() {
         </div>
       )}
 
-      {step === "preview" && mapResult && (
+      {step === "preview" && (loanMapResult || paymentMapResult) && (
         <div className="space-y-4">
           <div className="flex gap-4 text-sm">
             <p className="text-forest">
-              {mapResult.valid.length} {t("import_readyToImport")}
+              {validCount} {t("import_readyToImport")}
             </p>
-            {mapResult.invalid.length > 0 && (
+            {invalidRows.length > 0 && (
               <p className="text-rust">
-                {mapResult.invalid.length} {t("import_willBeSkipped")}
+                {invalidRows.length} {t("import_willBeSkipped")}
               </p>
             )}
           </div>
 
-          {mapResult.valid.length > 0 && (
+          {kind === "loans" && loanMapResult && loanMapResult.valid.length > 0 && (
             <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden max-h-80 overflow-y-auto">
-              {mapResult.valid.slice(0, 10).map((loan, idx) => (
+              {loanMapResult.valid.slice(0, 10).map((loan, idx) => (
                 <div key={idx} className="px-4 py-2 flex items-center justify-between text-sm">
                   <div>
                     <p className="text-ink">{loan.borrower_name}</p>
@@ -264,9 +366,47 @@ export default function ImportWizard() {
                   </span>
                 </div>
               ))}
-              {mapResult.valid.length > 10 && (
+              {loanMapResult.valid.length > 10 && (
                 <p className="px-4 py-2 text-xs text-ink-soft italic">
-                  +{mapResult.valid.length - 10} {t("import_more")}
+                  +{loanMapResult.valid.length - 10} {t("import_more")}
+                </p>
+              )}
+            </div>
+          )}
+
+          {kind === "payments" && paymentMapResult && paymentMapResult.valid.length > 0 && (
+            <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden max-h-80 overflow-y-auto">
+              {paymentMapResult.valid.slice(0, 10).map((p, idx) => (
+                <div key={idx} className="px-4 py-2 flex items-center justify-between text-sm">
+                  <div>
+                    <p className="text-ink">{p.borrower_name}</p>
+                    <p className="text-xs text-ink-soft">
+                      {new Date(p.paid_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className="tabular text-forest">
+                    +{formatINR(p.amount)}
+                  </span>
+                </div>
+              ))}
+              {paymentMapResult.valid.length > 10 && (
+                <p className="px-4 py-2 text-xs text-ink-soft italic">
+                  +{paymentMapResult.valid.length - 10} {t("import_more")}
+                </p>
+              )}
+            </div>
+          )}
+
+          {invalidRows.length > 0 && (
+            <div className="rounded-lg border border-rust-soft bg-rust-soft/40 px-3 py-2 max-h-40 overflow-y-auto">
+              {invalidRows.slice(0, 5).map((inv, idx) => (
+                <p key={idx} className="text-xs text-rust">
+                  {inv.reason}
+                </p>
+              ))}
+              {invalidRows.length > 5 && (
+                <p className="text-xs text-rust italic">
+                  +{invalidRows.length - 5} {t("import_more")}
                 </p>
               )}
             </div>
@@ -275,12 +415,12 @@ export default function ImportWizard() {
           <div className="flex gap-2">
             <button
               onClick={handleConfirmImport}
-              disabled={importing || mapResult.valid.length === 0}
+              disabled={importing || validCount === 0}
               className="rounded-md bg-forest text-white text-sm font-medium px-4 py-2 hover:opacity-90 disabled:opacity-50"
             >
               {importing
                 ? t("import_importing")
-                : `${t("import_confirm")} (${mapResult.valid.length})`}
+                : `${t("import_confirm")} (${validCount})`}
             </button>
             <button onClick={() => setStep("map")} className="text-sm text-ink-soft">
               {t("import_backToMapping")}

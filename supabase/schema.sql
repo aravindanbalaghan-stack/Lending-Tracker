@@ -5,6 +5,7 @@ create table if not exists loans (
   id uuid primary key default gen_random_uuid(),
   lender_id uuid not null references auth.users(id) on delete cascade,
   borrower_name text not null check (length(trim(borrower_name)) > 0),
+  borrower_name_ta text,
   principal numeric(12,2) not null check (principal > 0),
   interest_rate numeric(5,2) not null default 25 check (interest_rate >= 0),
   payback_amount numeric(12,2) not null check (payback_amount >= 0),
@@ -25,6 +26,7 @@ create table if not exists repayments (
   loan_id uuid not null references loans(id) on delete cascade,
   lender_id uuid not null references auth.users(id) on delete cascade,
   amount numeric(12,2) not null check (amount > 0),
+  payment_mode text not null default 'Cash' check (payment_mode in ('Cash', 'UPI')),
   paid_at timestamptz not null default now()
 );
 

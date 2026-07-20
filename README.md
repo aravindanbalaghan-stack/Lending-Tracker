@@ -7,6 +7,75 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Five small-but-useful changes (latest)
+
+1. **Default installments is now 10** (was 1) on the New Loan form — still
+   fully editable per loan.
+2. **Dashboard wording cleaned up** — now that the calendar lets you pick
+   any date, the old "last 15 days" text is gone from the subtitle.
+3. **Auto-suggested Tamil name field** — every borrower now has a second
+   name field in Tamil script, auto-filled as you type the English name
+   using a phonetic transliteration. **Important caveat:** this is a
+   best-effort approximation, not a linguistically perfect
+   transliteration — uncommon consonant clusters (like "pr", "kr") won't
+   always come out the way a native speaker would spell them by hand.
+   The field is fully editable everywhere it appears (new loan form,
+   rename borrower), so a one-time correction sticks for good. Once set,
+   searching in the Borrowers list matches either the English or Tamil
+   name.
+4. **Payment mode (Cash / UPI)** — every repayment now records how it was
+   received. Shown as a small tag next to each repayment, editable
+   afterward, and available as an optional column when importing
+   payments from a spreadsheet.
+5. **Clickable names on the dashboard** — tap any borrower's name in the
+   selected day's list to jump straight to their page in Borrowers.
+
+### Database change required
+Run `supabase/migrations/005_tamil_name_and_payment_mode.sql` in
+Supabase's SQL Editor. Adds two new columns, touches nothing existing.
+
+## Editing existing data (latest)
+
+Everything in the app was insert-only until now — if a name was misspelled
+or an amount entered wrong, there was no way to fix it. Three new edit
+options on the borrower detail page:
+
+- **Edit loan** — under each loan's summary, fixes the amount, interest
+  rate, payback amount (with the same manual-override checkbox as when
+  creating it), installment count, collection schedule, date given, or
+  notes.
+- **Edit repayment** — next to any repayment row, fixes its amount or
+  date.
+- **Rename borrower** — next to the borrower's name at the top of the
+  page. This renames **every loan that borrower has**, in one action —
+  it deliberately doesn't let you rename just one of their loans, since
+  that would split one person into two separate borrower entries by
+  accident.
+
+All of this works offline the same way as everything else — edits save
+locally immediately and sync automatically once you're back online.
+
+No database migration needed — editing uses the same tables and the same
+row-level security that already protects everything else.
+
+## Import payments, not just loans (latest)
+
+The Import page now has a **Loans / Payments** toggle at the top. Payment
+import works by matching each row to an existing borrower by name — since
+your old system won't have this app's internal loan IDs, matching is done
+by borrower name instead:
+
+- If a borrower has exactly one loan, every imported payment attaches to it
+- If a borrower has more than one loan, payments are applied to their
+  **oldest loan that still has a balance owing** first — like a natural
+  repayment waterfall — falling back to their most recent loan only once
+  everything else is settled, so nothing is silently dropped
+- **Import loans before importing payments** — payments can only match
+  against loans that already exist in the app
+
+Rows for borrowers with no matching loan are flagged as skipped in the
+preview step, with the reason shown, rather than silently failing.
+
 ## Calendar dashboard & daily cash tracking (latest)
 
 The dashboard is now built around a compact calendar (top-right on

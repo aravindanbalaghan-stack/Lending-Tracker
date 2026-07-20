@@ -42,6 +42,43 @@ export async function processOutbox(): Promise<{
         ({ error } = await supabase
           .from("loans")
           .insert(entry.payload as Record<string, unknown>[]));
+      } else if (entry.type === "insert_repayments_bulk") {
+        ({ error } = await supabase
+          .from("repayments")
+          .insert(entry.payload as Record<string, unknown>[]));
+      } else if (entry.type === "update_loan") {
+        const payload = entry.payload as {
+          id: string;
+          changes: Record<string, unknown>;
+        };
+        ({ error } = await supabase
+          .from("loans")
+          .update(payload.changes)
+          .eq("id", payload.id));
+      } else if (entry.type === "update_repayment") {
+        const payload = entry.payload as {
+          id: string;
+          changes: Record<string, unknown>;
+        };
+        ({ error } = await supabase
+          .from("repayments")
+          .update(payload.changes)
+          .eq("id", payload.id));
+      } else if (entry.type === "rename_borrower") {
+        const payload = entry.payload as {
+          lender_id: string;
+          old_name: string;
+          new_name: string;
+          new_name_ta: string | null;
+        };
+        ({ error } = await supabase
+          .from("loans")
+          .update({
+            borrower_name: payload.new_name,
+            borrower_name_ta: payload.new_name_ta,
+          })
+          .eq("lender_id", payload.lender_id)
+          .eq("borrower_name", payload.old_name));
       } else if (entry.type === "upsert_daily_entry") {
         ({ error } = await supabase
           .from("daily_entries")

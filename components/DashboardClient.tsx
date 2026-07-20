@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { dateKey, formatINR } from "@/lib/calculations";
 import { computeDaySummary } from "@/lib/dailyDetails";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -100,7 +101,12 @@ export default function DashboardClient() {
                   className="flex items-center justify-between px-4 py-3"
                 >
                   <div>
-                    <p className="text-sm text-ink">{r.borrower_name}</p>
+                    <Link
+                      href={`/borrowers/${encodeURIComponent(r.borrower_name)}`}
+                      className="text-sm text-ink hover:text-forest hover:underline underline-offset-2"
+                    >
+                      {r.borrower_name}
+                    </Link>
                     <p className="text-xs text-ink-soft">
                       {new Date(r.paid_at).toLocaleTimeString(locale, {
                         hour: "2-digit",

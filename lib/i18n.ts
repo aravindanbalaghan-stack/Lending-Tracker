@@ -25,7 +25,7 @@ export const dictionary = {
     login_signInLink: "Sign in",
 
     dashboard_title: "Dashboard",
-    dashboard_subtitle: "Amount collected per day, last 15 days.",
+    dashboard_subtitle: "Pick a date on the calendar to see that day's activity.",
     dashboard_receivedToday: "Received today",
     dashboard_dailyTotals: "Daily totals",
     dashboard_7days: "7 days",
@@ -51,6 +51,8 @@ export const dictionary = {
     repay_subtitle: "Search a borrower and record a repayment in one step.",
     repay_empty: "No outstanding borrowers to repay.",
     repay_action: "Repay",
+    repay_modeCash: "Cash",
+    repay_modeUpi: "UPI",
 
     missed_title: "Missed Repayments",
     missed_subtitle:
@@ -82,6 +84,13 @@ export const dictionary = {
     import_field_schedule: "Collection schedule (Daily/Monthly/weekday)",
     import_field_date: "Date given (default today)",
     import_field_notes: "Notes",
+    import_field_paymentAmount: "Payment amount",
+    import_field_paymentMode: "Payment mode (Cash/UPI)",
+    import_field_paidDate: "Date paid",
+    import_field_nameTamil: "Borrower name (Tamil)",
+    import_kindLoans: "Loans",
+    import_kindPayments: "Payments",
+    import_paymentsHint: "Matches each payment to a borrower's existing loan by name. If a borrower has more than one loan, payments go to their oldest unpaid loan first. Import loans before importing their payments.",
     import_downloadSample: "Download a sample CSV to see the expected format",
     import_tooManyRows: "That file has too many rows for a single import",
     import_fileTooLarge: "That file is too large (max 10MB). Try splitting it into smaller files.",
@@ -103,6 +112,8 @@ export const dictionary = {
 
     newLoan_title: "New loan",
     newLoan_borrowerName: "Borrower name",
+    newLoan_borrowerNameTamil: "Borrower name (Tamil)",
+    newLoan_tamilNameHint: "Auto-suggested from the English name — edit if it's not quite right.",
     newLoan_amountGiven: "Amount given (₹)",
     newLoan_interestRate: "Interest rate (%)",
     newLoan_installments: "Number of installments",
@@ -129,6 +140,9 @@ export const dictionary = {
     detail_save: "Save",
     detail_saving: "Saving…",
     detail_cancel: "Cancel",
+    detail_editLoan: "Edit loan",
+    detail_edit: "Edit",
+    detail_renameBorrower: "Rename",
 
     schedule_Monday: "Monday",
     schedule_Tuesday: "Tuesday",
@@ -164,7 +178,7 @@ export const dictionary = {
     login_signInLink: "உள்நுழைக",
 
     dashboard_title: "டாஷ்போர்டு",
-    dashboard_subtitle: "கடந்த 15 நாட்களில் தினசரி வசூல்.",
+    dashboard_subtitle: "நாளைத் தேர்ந்தெடுத்து அன்றைய விவரங்களைக் காணவும்.",
     dashboard_receivedToday: "இன்று பெறப்பட்டது",
     dashboard_dailyTotals: "தினசரி மொத்தம்",
     dashboard_7days: "7 நாட்கள்",
@@ -190,6 +204,8 @@ export const dictionary = {
     repay_subtitle: "ஒரு பெயரைத் தேடி, ஒரே படியில் திருப்பிச் செலுத்தியதை பதிவு செய்யுங்கள்.",
     repay_empty: "நிலுவையில் யாரும் இல்லை.",
     repay_action: "செலுத்து",
+    repay_modeCash: "பணம்",
+    repay_modeUpi: "UPI",
 
     missed_title: "தவறவிட்ட செலுத்துதல்கள்",
     missed_subtitle:
@@ -221,6 +237,13 @@ export const dictionary = {
     import_field_schedule: "வசூல் அட்டவணை (தினசரி/மாதாந்திரம்/வாரநாள்)",
     import_field_date: "கொடுத்த தேதி (இயல்பு இன்று)",
     import_field_notes: "குறிப்புகள்",
+    import_field_paymentAmount: "செலுத்திய தொகை",
+    import_field_paymentMode: "செலுத்தும் முறை (பணம்/UPI)",
+    import_field_paidDate: "செலுத்திய தேதி",
+    import_field_nameTamil: "பெயர் (தமிழ்)",
+    import_kindLoans: "கடன்கள்",
+    import_kindPayments: "பணம் செலுத்தியவை",
+    import_paymentsHint: "பெயரின் அடிப்படையில் ஒவ்வொரு பணமும் கடன் வாங்குபவரின் கடனுடன் இணைக்கப்படும். ஒருவருக்கு பல கடன்கள் இருந்தால், பழைய நிலுவைக் கடனுக்கு முதலில் செல்லும். பணம் செலுத்தியவற்றை இறக்குமதி செய்யும் முன் கடன்களை இறக்குமதி செய்யவும்.",
     import_downloadSample: "எதிர்பார்க்கப்படும் வடிவமைப்பை காண மாதிரி CSV-ஐ பதிவிறக்கவும்",
     import_tooManyRows: "இந்த கோப்பில் அதிக வரிசைகள் உள்ளன",
     import_fileTooLarge: "கோப்பு மிகப் பெரியது (அதிகபட்சம் 10MB). சிறிய கோப்புகளாகப் பிரிக்கவும்.",
@@ -242,6 +265,8 @@ export const dictionary = {
 
     newLoan_title: "புதிய கடன்",
     newLoan_borrowerName: "பெயர்",
+    newLoan_borrowerNameTamil: "பெயர் (தமிழ்)",
+    newLoan_tamilNameHint: "ஆங்கிலப் பெயரிலிருந்து தானாக பரிந்துரைக்கப்பட்டது — தேவைப்பட்டால் திருத்தவும்.",
     newLoan_amountGiven: "கொடுத்த தொகை (₹)",
     newLoan_interestRate: "வட்டி விகிதம் (%)",
     newLoan_installments: "தவணைகள் எண்ணிக்கை",
@@ -268,6 +293,9 @@ export const dictionary = {
     detail_save: "சேமி",
     detail_saving: "சேமிக்கிறது…",
     detail_cancel: "ரத்து செய்",
+    detail_editLoan: "கடனைத் திருத்து",
+    detail_edit: "திருத்து",
+    detail_renameBorrower: "பெயர் மாற்று",
 
     schedule_Monday: "திங்கள்",
     schedule_Tuesday: "செவ்வாய்",

@@ -9,6 +9,7 @@ export type LoanRecord = {
   id: string;
   lender_id: string;
   borrower_name: string;
+  borrower_name_ta: string | null;
   principal: number;
   interest_rate: number;
   payback_amount: number;
@@ -23,6 +24,7 @@ export type RepaymentRecord = {
   loan_id: string;
   lender_id: string;
   amount: number;
+  payment_mode: string;
   paid_at: string;
 };
 
@@ -47,6 +49,10 @@ export type OutboxEntry = {
     | "insert_loan"
     | "insert_repayment"
     | "insert_loans_bulk"
+    | "insert_repayments_bulk"
+    | "update_loan"
+    | "update_repayment"
+    | "rename_borrower"
     | "upsert_daily_entry"
     | "upsert_settings";
   payload: unknown;

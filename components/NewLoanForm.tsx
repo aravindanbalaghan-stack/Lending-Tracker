@@ -9,16 +9,21 @@ import {
   defaultScheduleForDate,
   type CollectionSchedule,
 } from "@/lib/schedule";
+import { transliterateToTamil } from "@/lib/transliterate";
+import { useLocalData } from "@/lib/offline/useLocalData";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 
 export default function NewLoanForm() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { loans } = useLocalData();
   const [borrowerName, setBorrowerName] = useState("");
+  const [borrowerNameTa, setBorrowerNameTa] = useState("");
+  const [tamilTouched, setTamilTouched] = useState(false);
   const [principal, setPrincipal] = useState("");
   const [rate, setRate] = useState("25");
-  const [installments, setInstallments] = useState("1");
+  const [installments, setInstallments] = useState("10");
   const [givenAt, setGivenAt] = useState(() =>
     new Date().toISOString().slice(0, 10)
   );
@@ -31,6 +36,17 @@ export default function NewLoanForm() {
   const [paybackOverrideValue, setPaybackOverrideValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function handleNameChange(value: string) {
+    setBorrowerName(value);
+    if (tamilTouched) return;
+    // If this name already belongs to an existing borrower, reuse their
+    // Tamil name instead of re-guessing it, so it stays consistent.
+    const existing = loans.find((l) => l.borrower_name === value.trim());
+    setBorrowerNameTa(
+      existing?.borrower_name_ta || (value.trim() ? transliterateToTamil(value.trim()) : "")
+    );
+  }
 
   const principalNum = parseFloat(principal) || 0;
   const rateNum = parseFloat(rate) || 0;
@@ -80,6 +96,7 @@ export default function NewLoanForm() {
     setLoading(true);
     const result = await createLoanOffline({
       borrower_name: borrowerName.trim(),
+      borrower_name_ta: borrowerNameTa.trim() || null,
       principal: principalNum,
       interest_rate: rateNum,
       payback_amount: payback,
@@ -112,11 +129,29 @@ export default function NewLoanForm() {
           </label>
           <input
             value={borrowerName}
-            onChange={(e) => setBorrowerName(e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
             required
             className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest"
             placeholder="e.g. Ramesh Kumar / ரமேஷ் குமார்"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-ink-soft mb-1">
+            {t("newLoan_borrowerNameTamil")}
+          </label>
+          <input
+            value={borrowerNameTa}
+            onChange={(e) => {
+              setTamilTouched(true);
+              setBorrowerNameTa(e.target.value);
+            }}
+            className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest"
+            placeholder="ரமேஷ் குமார்"
+          />
+          <p className="text-[10px] text-ink-soft mt-1">
+            {t("newLoan_tamilNameHint")}
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

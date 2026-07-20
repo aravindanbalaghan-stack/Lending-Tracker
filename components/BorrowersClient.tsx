@@ -10,6 +10,7 @@ import { useLocalData } from "@/lib/offline/useLocalData";
 
 type BorrowerSummary = {
   name: string;
+  nameTa: string | null;
   totalGiven: number;
   outstanding: number;
   loanCount: number;
@@ -42,6 +43,7 @@ export default function BorrowersClient() {
     const grouped = new Map<
       string,
       {
+        nameTa: string | null;
         totalGiven: number;
         totalOwed: number;
         totalPaid: number;
@@ -54,6 +56,7 @@ export default function BorrowersClient() {
     for (const loan of loans) {
       const paid = paidByLoanId.get(loan.id) ?? 0;
       const existing = grouped.get(loan.borrower_name) ?? {
+        nameTa: loan.borrower_name_ta,
         totalGiven: 0,
         totalOwed: 0,
         totalPaid: 0,
@@ -68,6 +71,7 @@ export default function BorrowersClient() {
       if (loan.given_at >= existing.latestGivenAt) {
         existing.latestGivenAt = loan.given_at;
         existing.latestSchedule = loan.collection_schedule;
+        existing.nameTa = loan.borrower_name_ta ?? existing.nameTa;
       }
       grouped.set(loan.borrower_name, existing);
     }
@@ -75,6 +79,7 @@ export default function BorrowersClient() {
     return Array.from(grouped.entries())
       .map(([name, stats]) => ({
         name,
+        nameTa: stats.nameTa,
         totalGiven: stats.totalGiven,
         outstanding: stats.totalOwed - stats.totalPaid,
         loanCount: stats.loanCount,
@@ -107,7 +112,10 @@ export default function BorrowersClient() {
       }
       if (!q) return true;
       // Plain substring match works for both English and Tamil script.
-      return b.name.toLowerCase().includes(q);
+      return (
+        b.name.toLowerCase().includes(q) ||
+        (b.nameTa ?? "").toLowerCase().includes(q)
+      );
     });
   }, [borrowers, activeTab, activeDay, query]);
 
@@ -200,7 +208,12 @@ export default function BorrowersClient() {
               className="flex items-center justify-between px-4 py-3 hover:bg-paper transition"
             >
               <div>
-                <p className="text-sm text-ink font-medium">{b.name}</p>
+                <p className="text-sm text-ink font-medium">
+                  {b.name}
+                  {b.nameTa && (
+                    <span className="text-ink-soft font-normal"> · {b.nameTa}</span>
+                  )}
+                </p>
                 <p className="text-xs text-ink-soft">
                   {b.loanCount} {t(b.loanCount > 1 ? "borrowers_loans" : "borrowers_loan")} ·{" "}
                   {t("borrowers_given")} {formatINR(b.totalGiven)}

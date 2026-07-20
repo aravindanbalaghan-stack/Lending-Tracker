@@ -5,9 +5,12 @@ import {
   putLoan,
   putLoans,
   putRepayment,
+  putRepayments,
   putDailyEntry,
   putSettings,
   enqueueOutbox,
+  getAllLoans,
+  getAllRepayments,
   type LoanRecord,
   type RepaymentRecord,
   type DailyEntryRecord,
@@ -127,6 +130,145 @@ export async function saveSettings(
     if (error) await enqueueOutbox("upsert_settings", settings);
   } else {
     await enqueueOutbox("upsert_settings", settings);
+  }
+
+  return { ok: true };
+}
+
+export async function createRepaymentsBulkOffline(
+  inputs: Omit<RepaymentRecord, "id" | "lender_id">[]
+): Promise<{ ok: boolean; count: number; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, count: 0, error: "You must be signed in." };
+
+  const repayments: RepaymentRecord[] = inputs.map((i) => ({
+    id: crypto.randomUUID(),
+    lender_id: userId,
+    ...i,
+  }));
+
+  await putRepayments(repayments);
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    const BATCH_SIZE = 200;
+    for (let i = 0; i < repayments.length; i += BATCH_SIZE) {
+      const batch = repayments.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from("repayments").insert(batch);
+      if (error) await enqueueOutbox("insert_repayments_bulk", batch);
+    }
+  } else {
+    await enqueueOutbox("insert_repayments_bulk", repayments);
+  }
+
+  return { ok: true, count: repayments.length };
+}
+
+export async function updateLoanOffline(
+  loanId: string,
+  changes: Omit<
+    LoanRecord,
+    "id" | "lender_id" | "borrower_name" | "borrower_name_ta"
+  >
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+
+  const existing = (await getAllLoans()).find((l) => l.id === loanId);
+  if (!existing) return { ok: false, error: "Loan not found locally." };
+
+  const updated: LoanRecord = { ...existing, ...changes };
+  await putLoan(updated);
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("loans")
+      .update(changes)
+      .eq("id", loanId);
+    if (error) {
+      await enqueueOutbox("update_loan", { id: loanId, changes });
+    }
+  } else {
+    await enqueueOutbox("update_loan", { id: loanId, changes });
+  }
+
+  return { ok: true };
+}
+
+export async function updateRepaymentOffline(
+  repaymentId: string,
+  changes: { amount: number; payment_mode: string; paid_at: string }
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+
+  const existing = (await getAllRepayments()).find(
+    (r) => r.id === repaymentId
+  );
+  if (!existing) return { ok: false, error: "Repayment not found locally." };
+
+  const updated: RepaymentRecord = { ...existing, ...changes };
+  await putRepayment(updated);
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("repayments")
+      .update(changes)
+      .eq("id", repaymentId);
+    if (error) {
+      await enqueueOutbox("update_repayment", { id: repaymentId, changes });
+    }
+  } else {
+    await enqueueOutbox("update_repayment", { id: repaymentId, changes });
+  }
+
+  return { ok: true };
+}
+
+export async function renameBorrowerOffline(
+  oldName: string,
+  newName: string,
+  newNameTa: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+  if (!newName.trim()) return { ok: false, error: "Name cannot be empty." };
+
+  const affected = (await getAllLoans()).filter(
+    (l) => l.borrower_name === oldName
+  );
+  await putLoans(
+    affected.map((l) => ({
+      ...l,
+      borrower_name: newName.trim(),
+      borrower_name_ta: newNameTa?.trim() || null,
+    }))
+  );
+
+  const payload = {
+    lender_id: userId,
+    old_name: oldName,
+    new_name: newName.trim(),
+    new_name_ta: newNameTa?.trim() || null,
+  };
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("loans")
+      .update({
+        borrower_name: newName.trim(),
+        borrower_name_ta: newNameTa?.trim() || null,
+      })
+      .eq("lender_id", userId)
+      .eq("borrower_name", oldName);
+    if (error) {
+      await enqueueOutbox("rename_borrower", payload);
+    }
+  } else {
+    await enqueueOutbox("rename_borrower", payload);
   }
 
   return { ok: true };

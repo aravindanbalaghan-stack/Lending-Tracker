@@ -15,6 +15,7 @@ export default function RepaymentQuickForm({
 }) {
   const { t } = useLanguage();
   const [amount, setAmount] = useState("");
+  const [paymentMode, setPaymentMode] = useState<"Cash" | "UPI">("Cash");
   const [paidAt, setPaidAt] = useState(() =>
     new Date().toISOString().slice(0, 16)
   );
@@ -34,6 +35,7 @@ export default function RepaymentQuickForm({
     const result = await createRepaymentOffline({
       loan_id: loanId,
       amount: amountNum,
+      payment_mode: paymentMode,
       paid_at: new Date(paidAt).toISOString(),
     });
     setLoading(false);
@@ -60,6 +62,26 @@ export default function RepaymentQuickForm({
           className="flex-1 min-w-[140px] rounded-md border border-ledger-line px-3 py-2 text-sm tabular focus:outline-none focus:ring-2 focus:ring-forest"
           autoFocus
         />
+        <div className="flex rounded-md border border-ledger-line overflow-hidden text-sm">
+          <button
+            type="button"
+            onClick={() => setPaymentMode("Cash")}
+            className={`px-3 py-2 ${
+              paymentMode === "Cash" ? "bg-forest text-white" : "bg-white text-ink-soft"
+            }`}
+          >
+            {t("repay_modeCash")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaymentMode("UPI")}
+            className={`px-3 py-2 ${
+              paymentMode === "UPI" ? "bg-forest text-white" : "bg-white text-ink-soft"
+            }`}
+          >
+            {t("repay_modeUpi")}
+          </button>
+        </div>
         <input
           type="datetime-local"
           value={paidAt}
