@@ -3,7 +3,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 
 const DB_NAME = "kanakku-book";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export type LoanRecord = {
   id: string;
@@ -80,6 +80,9 @@ function getDb() {
         }
         if (!db.objectStoreNames.contains("settings")) {
           db.createObjectStore("settings", { keyPath: "lender_id" });
+        }
+        if (!db.objectStoreNames.contains("meta")) {
+          db.createObjectStore("meta", { keyPath: "key" });
         }
       },
     });
@@ -202,6 +205,34 @@ export async function clearAllLocalData() {
     db.clear("loans"),
     db.clear("repayments"),
     db.clear("outbox"),
+    db.clear("dailyEntries"),
+    db.clear("settings"),
   ]);
   notify();
+}
+
+// Guards against one browser's local cache ever showing a different
+// account's data — e.g. two test accounts used on the same device. Call
+// this with the currently authenticated user's id (or null if signed out)
+// on every app load and every sign-in. If the cache belongs to a
+// different user (or we can't tell whose it is, such as right after
+// this check was introduced), it wipes the local cache so a fresh,
+// correctly-scoped pull happens from the server.
+export async function ensureLocalDataMatchesUser(
+  userId: string | null
+): Promise<void> {
+  const db = await getDb();
+  const metaRecord = await db.get("meta", "currentUserId").catch(() => undefined);
+  const storedUserId: string | undefined = metaRecord?.value;
+
+  if (!userId) {
+    await clearAllLocalData();
+    await db.delete("meta", "currentUserId").catch(() => {});
+    return;
+  }
+
+  if (storedUserId !== userId) {
+    await clearAllLocalData();
+    await db.put("meta", { key: "currentUserId", value: userId });
+  }
 }

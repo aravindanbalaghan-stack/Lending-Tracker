@@ -7,8 +7,9 @@ import {
   useState,
   useCallback,
 } from "react";
-import { getOutbox, subscribeDb } from "@/lib/offline/db";
+import { getOutbox, subscribeDb, ensureLocalDataMatchesUser } from "@/lib/offline/db";
 import { syncNow, getLastSyncError } from "@/lib/offline/sync";
+import { createClient } from "@/lib/supabase/client";
 
 type OfflineContextValue = {
   isOnline: boolean;
@@ -46,7 +47,20 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of browser's online status on mount
     setIsOnline(navigator.onLine);
-    refreshPendingCount();
+
+    async function init() {
+      // Guard first: make sure the local cache actually belongs to
+      // whoever is currently signed in before reading or syncing anything.
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      await ensureLocalDataMatchesUser(session?.user?.id ?? null);
+
+      refreshPendingCount();
+      if (navigator.onLine) triggerSync();
+    }
+    init();
 
     function handleOnline() {
       setIsOnline(true);
@@ -59,8 +73,6 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     const unsubscribe = subscribeDb(refreshPendingCount);
-
-    if (navigator.onLine) triggerSync();
 
     return () => {
       window.removeEventListener("online", handleOnline);

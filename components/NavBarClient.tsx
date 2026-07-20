@@ -2,9 +2,20 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
+import { createClient } from "@/lib/supabase/client";
+import { ensureLocalDataMatchesUser } from "@/lib/offline/db";
 
 export default function NavBarClient({ hasUser }: { hasUser: boolean }) {
   const { lang, setLang, t } = useLanguage();
+
+  async function handleSignOut() {
+    // Clear the local cache first — this is what stops the next person
+    // to use this device/browser from ever seeing this account's data.
+    await ensureLocalDataMatchesUser(null);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
 
   return (
     <header className="border-b border-ledger-line bg-white">
@@ -61,14 +72,12 @@ export default function NavBarClient({ hasUser }: { hasUser: boolean }) {
           </div>
 
           {hasUser && (
-            <form action="/api/auth/signout" method="post">
-              <button
-                type="submit"
-                className="text-ink-soft hover:text-rust text-xs"
-              >
-                {t("nav_signOut")}
-              </button>
-            </form>
+            <button
+              onClick={handleSignOut}
+              className="text-ink-soft hover:text-rust text-xs"
+            >
+              {t("nav_signOut")}
+            </button>
           )}
         </nav>
       </div>

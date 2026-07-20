@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ensureLocalDataMatchesUser } from "@/lib/offline/db";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function LoginPage() {
@@ -23,13 +24,14 @@ export default function LoginPage() {
     const supabase = createClient();
 
     if (mode === "signin") {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) {
         setError(error.message);
       } else {
+        await ensureLocalDataMatchesUser(data.user?.id ?? null);
         router.push("/dashboard");
         router.refresh();
       }
