@@ -9,10 +9,20 @@
 const CONSONANTS: Record<string, string> = {
   kh: "க", gh: "க", ng: "ங", ch: "ச", chh: "ச", jh: "ஜ", ny: "ஞ",
   th: "த", dh: "த", ph: "ப", bh: "ப", sh: "ஷ", zh: "ழ",
-  k: "க", g: "க", c: "ச", j: "ஜ", t: "ட", d: "ட", n: "ன",
+  tt: "ட", dd: "ட", rr: "ற",
+  k: "க", g: "க", c: "ச", j: "ஜ",
+  // Plain "t"/"d" default to the dental த — this is the far more common
+  // sound in everyday names ("Sita", "Latha", "Deepa"). The hard
+  // retroflex ட is reached via the explicit "tt"/"dd" spellings above.
+  t: "த", d: "த", n: "ன",
   p: "ப", f: "ஃப", b: "ப", m: "ம", y: "ய", r: "ர", l: "ல",
   v: "வ", w: "வ", s: "ஸ", h: "ஹ", q: "க", x: "க்ஸ", z: "ஸ",
 };
+
+// Word-initial "n" is the dental ந (Nathan, Naveen); everywhere else it's
+// the alveolar ன (Kannan, Kumaran) — a very common source of visibly
+// wrong-looking spellings if not handled positionally.
+const WORD_INITIAL_N = "ந";
 
 const VOWEL_SIGNS: Record<string, string> = {
   aa: "ா", ee: "ீ", oo: "ூ", ai: "ை", au: "ௌ",
@@ -54,16 +64,28 @@ function transliterateWord(word: string): string {
 
     if (consonantMatch) {
       if (pendingConsonant) out += pendingConsonant + PULLI;
-      pendingConsonant = consonantMatch.value;
+      let value = consonantMatch.value;
+      if (consonantMatch.key === "n") {
+        const next = text.slice(i + 1, i + 3);
+        const beforeDental = /^(th|dh|t|d)/.test(next);
+        if (i === 0 || beforeDental) value = WORD_INITIAL_N;
+      }
+      pendingConsonant = value;
       i += consonantMatch.key.length;
     } else if (vowelMatch) {
+      // A bare "a" at the very end of the word is almost always the long
+      // vowel in real Tamil name spelling (Priya, Latha, Uma, Divya all
+      // end in ஆ, not the short inherent அ) — even though it's romanized
+      // with a single "a". Lengthen it in that one specific position.
+      const atWordEnd = i + vowelMatch.key.length === text.length;
+      const vowelKey =
+        vowelMatch.key === "a" && atWordEnd ? "aa" : vowelMatch.key;
+
       if (pendingConsonant) {
-        out += vowelMatch.key === "a"
-          ? pendingConsonant
-          : pendingConsonant + VOWEL_SIGNS[vowelMatch.key];
+        out += vowelKey === "a" ? pendingConsonant : pendingConsonant + VOWEL_SIGNS[vowelKey];
         pendingConsonant = null;
       } else {
-        out += INDEPENDENT_VOWELS[vowelMatch.key];
+        out += INDEPENDENT_VOWELS[vowelKey];
       }
       i += vowelMatch.key.length;
     } else {

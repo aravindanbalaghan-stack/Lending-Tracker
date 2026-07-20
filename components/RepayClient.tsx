@@ -11,6 +11,7 @@ import { useLocalData } from "@/lib/offline/useLocalData";
 type RepayLoan = {
   id: string;
   borrower_name: string;
+  borrower_name_ta: string | null;
   outstanding: number;
   collection_schedule: string;
   given_at: string;
@@ -35,6 +36,7 @@ export default function RepayClient() {
       .map((l) => ({
         id: l.id,
         borrower_name: l.borrower_name,
+        borrower_name_ta: l.borrower_name_ta,
         outstanding: Number(l.payback_amount) - (paidByLoanId.get(l.id) ?? 0),
         collection_schedule: l.collection_schedule,
         given_at: l.given_at,
@@ -46,7 +48,11 @@ export default function RepayClient() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return loans;
-    return loans.filter((l) => l.borrower_name.toLowerCase().includes(q));
+    return loans.filter(
+      (l) =>
+        l.borrower_name.toLowerCase().includes(q) ||
+        (l.borrower_name_ta ?? "").toLowerCase().includes(q)
+    );
   }, [loans, query]);
 
   // Segregate: Daily section, one section per weekday (Weekly), Monthly section.
@@ -156,6 +162,9 @@ function ResultGroup({
             <div className="flex items-center justify-between">
               <p className="text-sm text-ink font-medium">
                 {loan.borrower_name}
+                {loan.borrower_name_ta && (
+                  <span className="text-ink-soft font-normal"> · {loan.borrower_name_ta}</span>
+                )}
               </p>
               <div className="text-right">
                 <p className="tabular text-sm text-rust">

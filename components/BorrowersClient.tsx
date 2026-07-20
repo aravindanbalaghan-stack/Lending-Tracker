@@ -2,18 +2,20 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { formatINR } from "@/lib/calculations";
+import { dateKey, formatINR } from "@/lib/calculations";
 import { WEEKDAYS, scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { useLocalData } from "@/lib/offline/useLocalData";
 
-type BorrowerSummary = {
+type LoanEntry = {
+  loanId: string;
   name: string;
   nameTa: string | null;
-  totalGiven: number;
+  principal: number;
   outstanding: number;
-  loanCount: number;
+  dateKey: string;
+  givenAt: string;
   schedule: string;
   group: ScheduleGroup;
 };
@@ -25,13 +27,15 @@ const TABS: { key: ScheduleGroup; labelKey: TranslationKey }[] = [
 ];
 
 export default function BorrowersClient() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const { loans, repayments, loading } = useLocalData();
   const [activeTab, setActiveTab] = useState<ScheduleGroup>("daily");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
-  const borrowers: BorrowerSummary[] = useMemo(() => {
+  const locale = lang === "ta" ? "ta-IN" : "en-IN";
+
+  const entries: LoanEntry[] = useMemo(() => {
     const paidByLoanId = new Map<string, number>();
     for (const r of repayments) {
       paidByLoanId.set(
@@ -40,84 +44,66 @@ export default function BorrowersClient() {
       );
     }
 
-    const grouped = new Map<
-      string,
-      {
-        nameTa: string | null;
-        totalGiven: number;
-        totalOwed: number;
-        totalPaid: number;
-        loanCount: number;
-        latestGivenAt: string;
-        latestSchedule: string;
-      }
-    >();
-
-    for (const loan of loans) {
-      const paid = paidByLoanId.get(loan.id) ?? 0;
-      const existing = grouped.get(loan.borrower_name) ?? {
-        nameTa: loan.borrower_name_ta,
-        totalGiven: 0,
-        totalOwed: 0,
-        totalPaid: 0,
-        loanCount: 0,
-        latestGivenAt: loan.given_at,
-        latestSchedule: loan.collection_schedule,
-      };
-      existing.totalGiven += Number(loan.principal);
-      existing.totalOwed += Number(loan.payback_amount);
-      existing.totalPaid += paid;
-      existing.loanCount += 1;
-      if (loan.given_at >= existing.latestGivenAt) {
-        existing.latestGivenAt = loan.given_at;
-        existing.latestSchedule = loan.collection_schedule;
-        existing.nameTa = loan.borrower_name_ta ?? existing.nameTa;
-      }
-      grouped.set(loan.borrower_name, existing);
-    }
-
-    return Array.from(grouped.entries())
-      .map(([name, stats]) => ({
-        name,
-        nameTa: stats.nameTa,
-        totalGiven: stats.totalGiven,
-        outstanding: stats.totalOwed - stats.totalPaid,
-        loanCount: stats.loanCount,
-        schedule: stats.latestSchedule,
-        group: scheduleGroup(stats.latestSchedule),
+    return loans
+      .map((l) => ({
+        loanId: l.id,
+        name: l.borrower_name,
+        nameTa: l.borrower_name_ta,
+        principal: Number(l.principal),
+        outstanding:
+          Number(l.payback_amount) - (paidByLoanId.get(l.id) ?? 0),
+        dateKey: dateKey(l.given_at),
+        givenAt: l.given_at,
+        schedule: l.collection_schedule,
+        group: scheduleGroup(l.collection_schedule),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [loans, repayments]);
 
   const counts = useMemo(() => {
     const c: Record<ScheduleGroup, number> = { daily: 0, weekly: 0, monthly: 0 };
-    for (const b of borrowers) c[b.group]++;
+    for (const e of entries) c[e.group]++;
     return c;
-  }, [borrowers]);
+  }, [entries]);
 
   const dayCounts = useMemo(() => {
     const c = new Map<string, number>();
-    for (const b of borrowers) {
-      if (b.group === "weekly") c.set(b.schedule, (c.get(b.schedule) ?? 0) + 1);
+    for (const e of entries) {
+      if (e.group === "weekly") c.set(e.schedule, (c.get(e.schedule) ?? 0) + 1);
     }
     return c;
-  }, [borrowers]);
+  }, [entries]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return borrowers.filter((b) => {
-      if (b.group !== activeTab) return false;
-      if (activeTab === "weekly" && activeDay && b.schedule !== activeDay) {
+    return entries.filter((e) => {
+      if (e.group !== activeTab) return false;
+      if (activeTab === "weekly" && activeDay && e.schedule !== activeDay) {
         return false;
       }
       if (!q) return true;
       // Plain substring match works for both English and Tamil script.
       return (
-        b.name.toLowerCase().includes(q) ||
-        (b.nameTa ?? "").toLowerCase().includes(q)
+        e.name.toLowerCase().includes(q) ||
+        (e.nameTa ?? "").toLowerCase().includes(q)
       );
     });
-  }, [borrowers, activeTab, activeDay, query]);
+  }, [entries, activeTab, activeDay, query]);
+
+  // Group into date sections, most recent date first — applies within
+  // whichever tab (and, for Weekly, whichever day) is currently active.
+  const dateSections = useMemo(() => {
+    const map = new Map<string, LoanEntry[]>();
+    for (const e of filtered) {
+      const list = map.get(e.dateKey) ?? [];
+      list.push(e);
+      map.set(e.dateKey, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+  }, [filtered]);
 
   if (loading) return null;
 
@@ -191,46 +177,57 @@ export default function BorrowersClient() {
         </div>
       )}
 
-      {filtered.length === 0 ? (
+      {dateSections.length === 0 ? (
         <div className="rounded-lg border border-dashed border-ledger-line p-8 text-center">
           <p className="text-sm text-ink-soft">
-            {borrowers.length === 0
+            {entries.length === 0
               ? t("borrowers_empty")
               : t("borrowers_emptySearch")}
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
-          {filtered.map((b) => (
-            <Link
-              key={b.name}
-              href={`/borrowers/${encodeURIComponent(b.name)}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-paper transition"
-            >
-              <div>
-                <p className="text-sm text-ink font-medium">
-                  {b.name}
-                  {b.nameTa && (
-                    <span className="text-ink-soft font-normal"> · {b.nameTa}</span>
-                  )}
-                </p>
-                <p className="text-xs text-ink-soft">
-                  {b.loanCount} {t(b.loanCount > 1 ? "borrowers_loans" : "borrowers_loan")} ·{" "}
-                  {t("borrowers_given")} {formatINR(b.totalGiven)}
-                </p>
+        <div className="space-y-5">
+          {dateSections.map(([date, dayEntries]) => (
+            <div key={date}>
+              <h2 className="text-sm font-medium text-ink-soft mb-2">
+                {new Date(date).toLocaleDateString(locale, {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </h2>
+              <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
+                {dayEntries.map((e) => (
+                  <Link
+                    key={e.loanId}
+                    href={`/borrowers/${encodeURIComponent(e.name)}`}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-paper transition"
+                  >
+                    <div>
+                      <p className="text-sm text-ink font-medium">
+                        {e.name}
+                        {e.nameTa && (
+                          <span className="text-ink-soft font-normal"> · {e.nameTa}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-ink-soft">
+                        {t("borrowers_given")} {formatINR(e.principal)}
+                      </p>
+                    </div>
+                    <p
+                      className={`tabular text-sm ${
+                        e.outstanding > 0 ? "text-rust" : "text-forest"
+                      }`}
+                    >
+                      {e.outstanding > 0
+                        ? `${formatINR(e.outstanding)} ${t("borrowers_due")}`
+                        : t("borrowers_settled")}
+                    </p>
+                  </Link>
+                ))}
               </div>
-              <div className="text-right">
-                <p
-                  className={`tabular text-sm ${
-                    b.outstanding > 0 ? "text-rust" : "text-forest"
-                  }`}
-                >
-                  {b.outstanding > 0
-                    ? `${formatINR(b.outstanding)} ${t("borrowers_due")}`
-                    : t("borrowers_settled")}
-                </p>
-              </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

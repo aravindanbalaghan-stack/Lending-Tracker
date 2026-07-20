@@ -1,6 +1,7 @@
 export type BackupLoan = {
   id: string;
   borrower_name: string;
+  borrower_name_ta: string | null;
   principal: number;
   interest_rate: number;
   payback_amount: number;
@@ -22,6 +23,7 @@ function csvEscape(value: string | number | null): string {
 export function loansToCsv(loans: BackupLoan[]): string {
   const header = [
     "Borrower Name",
+    "Borrower Name (Tamil)",
     "Amount Given",
     "Interest Rate (%)",
     "Payback Amount",
@@ -48,6 +50,7 @@ export function loansToCsv(loans: BackupLoan[]): string {
 
     return [
       loan.borrower_name,
+      loan.borrower_name_ta ?? "",
       loan.principal,
       loan.interest_rate,
       loan.payback_amount,

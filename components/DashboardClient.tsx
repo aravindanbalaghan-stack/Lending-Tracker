@@ -14,6 +14,7 @@ type RepaymentRow = {
   amount: number;
   paid_at: string;
   borrower_name: string;
+  borrower_name_ta: string | null;
 };
 
 export default function DashboardClient() {
@@ -25,11 +26,13 @@ export default function DashboardClient() {
 
   const rows: RepaymentRow[] = useMemo(() => {
     const nameByLoanId = new Map(loans.map((l) => [l.id, l.borrower_name]));
+    const nameTaByLoanId = new Map(loans.map((l) => [l.id, l.borrower_name_ta]));
     return repayments.map((r) => ({
       id: r.id,
       amount: Number(r.amount),
       paid_at: r.paid_at,
       borrower_name: nameByLoanId.get(r.loan_id) ?? "Unknown",
+      borrower_name_ta: nameTaByLoanId.get(r.loan_id) ?? null,
     }));
   }, [loans, repayments]);
 
@@ -106,6 +109,9 @@ export default function DashboardClient() {
                       className="text-sm text-ink hover:text-forest hover:underline underline-offset-2"
                     >
                       {r.borrower_name}
+                      {r.borrower_name_ta && (
+                        <span className="text-ink-soft"> · {r.borrower_name_ta}</span>
+                      )}
                     </Link>
                     <p className="text-xs text-ink-soft">
                       {new Date(r.paid_at).toLocaleTimeString(locale, {

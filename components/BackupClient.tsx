@@ -23,6 +23,7 @@ export default function BackupClient() {
     return allLoans.map((l) => ({
       id: l.id,
       borrower_name: l.borrower_name,
+      borrower_name_ta: l.borrower_name_ta,
       principal: Number(l.principal),
       interest_rate: Number(l.interest_rate),
       payback_amount: Number(l.payback_amount),

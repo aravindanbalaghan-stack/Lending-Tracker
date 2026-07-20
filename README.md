@@ -7,6 +7,29 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Borrowers grouped by date, and better Tamil names (latest)
+
+- **Borrowers list is now grouped by the date each loan was given** — one
+  section per date, most recent first, instead of a flat alphabetical
+  list. Applies to all three tabs (Daily / Weekly / Monthly). On the
+  Weekly tab, picking a specific weekday still narrows the list first —
+  the date sections then apply within that narrowed set.
+- **Tamil names now show up everywhere** a borrower's name appears — the
+  dashboard's daily list, Quick Repay, Missed Repayments, the Borrowers
+  list, and CSV backups — not just the borrower's own detail page.
+- **Transliteration accuracy improved.** A few specific, common mistakes
+  are fixed: names ending in a plain "a" (Priya, Latha, Uma, Divya) now
+  correctly get the long ஆ ending instead of dropping it; "t"/"d" now
+  default to the dental த sound used in most names instead of the harder
+  retroflex ட; and "n" now correctly becomes the dental ந at the start of
+  a word or before another dental sound (Naveen, Nandhini), and the
+  alveolar ன everywhere else (Kannan). This remains a best-effort
+  phonetic approximation, not a perfect transliteration — the Tamil name
+  field stays fully editable everywhere so any remaining mismatch can be
+  corrected once and it'll stick.
+
+No database migration needed for this update.
+
 ## Five small-but-useful changes (latest)
 
 1. **Default installments is now 10** (was 1) on the New Loan form — still

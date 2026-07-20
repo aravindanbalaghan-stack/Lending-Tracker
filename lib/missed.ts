@@ -3,6 +3,7 @@ import { scheduleGroup } from "@/lib/schedule";
 export type LoanForMissedCheck = {
   id: string;
   borrower_name: string;
+  borrower_name_ta: string | null;
   principal: number;
   payback_amount: number;
   collection_schedule: string;

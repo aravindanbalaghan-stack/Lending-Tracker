@@ -35,6 +35,7 @@ export default function MissedClient() {
     const forCheck: LoanForMissedCheck[] = allLoans.map((l) => ({
       id: l.id,
       borrower_name: l.borrower_name,
+      borrower_name_ta: l.borrower_name_ta,
       principal: Number(l.principal),
       payback_amount: Number(l.payback_amount),
       collection_schedule: l.collection_schedule,
@@ -84,6 +85,9 @@ export default function MissedClient() {
                       <div>
                         <p className="text-sm text-ink font-medium">
                           {loan.borrower_name}
+                          {loan.borrower_name_ta && (
+                            <span className="text-ink-soft font-normal"> · {loan.borrower_name_ta}</span>
+                          )}
                         </p>
                         <p className="text-xs text-rust">
                           {loan.daysSinceActivity} {t("missed_daysSince")}
