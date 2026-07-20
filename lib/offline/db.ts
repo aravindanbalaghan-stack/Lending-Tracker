@@ -3,7 +3,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 
 const DB_NAME = "kanakku-book";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export type LoanRecord = {
   id: string;
@@ -26,9 +26,29 @@ export type RepaymentRecord = {
   paid_at: string;
 };
 
+export type DailyEntryRecord = {
+  entry_date: string; // yyyy-mm-dd, primary key locally
+  lender_id: string;
+  opening_balance: number;
+  expenses: number;
+};
+
+export type SettingsRecord = {
+  lender_id: string; // primary key
+  mamai_rate: number;
+  threshold_daily: number;
+  threshold_weekly: number;
+  threshold_monthly: number;
+};
+
 export type OutboxEntry = {
   localId: number;
-  type: "insert_loan" | "insert_repayment" | "insert_loans_bulk";
+  type:
+    | "insert_loan"
+    | "insert_repayment"
+    | "insert_loans_bulk"
+    | "upsert_daily_entry"
+    | "upsert_settings";
   payload: unknown;
   createdAt: string;
 };
@@ -54,6 +74,12 @@ function getDb() {
             keyPath: "localId",
             autoIncrement: true,
           });
+        }
+        if (!db.objectStoreNames.contains("dailyEntries")) {
+          db.createObjectStore("dailyEntries", { keyPath: "entry_date" });
+        }
+        if (!db.objectStoreNames.contains("settings")) {
+          db.createObjectStore("settings", { keyPath: "lender_id" });
         }
       },
     });
@@ -111,6 +137,38 @@ export async function putRepayments(repayments: RepaymentRecord[]) {
   const tx = db.transaction("repayments", "readwrite");
   await Promise.all(repayments.map((r) => tx.store.put(r)));
   await tx.done;
+  notify();
+}
+
+export async function getAllDailyEntries(): Promise<DailyEntryRecord[]> {
+  const db = await getDb();
+  return db.getAll("dailyEntries");
+}
+
+export async function putDailyEntry(entry: DailyEntryRecord) {
+  const db = await getDb();
+  await db.put("dailyEntries", entry);
+  notify();
+}
+
+export async function putDailyEntries(entries: DailyEntryRecord[]) {
+  if (entries.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction("dailyEntries", "readwrite");
+  await Promise.all(entries.map((e) => tx.store.put(e)));
+  await tx.done;
+  notify();
+}
+
+export async function getSettings(): Promise<SettingsRecord | undefined> {
+  const db = await getDb();
+  const all = await db.getAll("settings");
+  return all[0];
+}
+
+export async function putSettings(settings: SettingsRecord) {
+  const db = await getDb();
+  await db.put("settings", settings);
   notify();
 }
 

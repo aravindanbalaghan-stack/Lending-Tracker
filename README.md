@@ -7,6 +7,43 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Calendar dashboard & daily cash tracking (latest)
+
+The dashboard is now built around a compact calendar (top-right on
+desktop, above the details on mobile) instead of a flat list of dates —
+click any date, past or present, to see that day's activity.
+
+Below it, a new daily details section tracks the day's full cash
+picture, with these fields (Tamil labels as requested, with a small
+English gloss under each so the app stays usable either way):
+
+| Field | Tamil | Meaning |
+|---|---|---|
+| Opening balance | முன்னிருப்பு | Manual — cash in hand at the start of the day |
+| Total collected | வசூல் | Automatic — sum of all repayments received that day |
+| On-time collection | நடப்பு வரவு | Automatic — the portion of வசூல் received within your configured window of each loan's start date |
+| Other collection | நிபு வரவு | Automatic — வசூல் minus நடப்பு வரவு |
+| Rate-based figure | மைமை | Automatic — calculated from new loans given that day, at a configurable rate per ₹1000 (default 30) |
+| Expenses | செலவு | Manual |
+| Amount given | அடப்பு | Automatic — sum of new loans given that day |
+| **Total** | **மொத்தம்** | முன்னிருப்பு + வசூல் + மைமை − செலவு − அடப்பு |
+
+**"On-time" window is configurable per schedule type** — a small
+settings panel under the daily details card lets you set how many days
+(for Daily borrowers), weeks (for Weekly), or months (for Monthly)
+counts as "on time," and the மைமை rate per ₹1000. These apply globally
+across all your loans and can be changed anytime.
+
+Both the manual fields (opening balance, expenses) and the settings are
+saved per-lender and sync the same offline-first way as everything else
+in the app — editable with no connection, syncing automatically once
+you're back online.
+
+### Database change required
+Two new tables support this. Run
+`supabase/migrations/004_daily_details.sql` in Supabase's SQL Editor.
+Nothing existing is touched.
+
 ## Works offline (latest)
 
 The app now works with no internet connection at all, and catches up

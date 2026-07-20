@@ -6,6 +6,8 @@ import {
   removeOutboxEntry,
   putLoans,
   putRepayments,
+  putDailyEntries,
+  putSettings,
 } from "@/lib/offline/db";
 
 let lastError: string | null = null;
@@ -40,13 +42,26 @@ export async function processOutbox(): Promise<{
         ({ error } = await supabase
           .from("loans")
           .insert(entry.payload as Record<string, unknown>[]));
+      } else if (entry.type === "upsert_daily_entry") {
+        ({ error } = await supabase
+          .from("daily_entries")
+          .upsert(entry.payload as Record<string, unknown>, {
+            onConflict: "lender_id,entry_date",
+          }));
+      } else if (entry.type === "upsert_settings") {
+        ({ error } = await supabase
+          .from("lender_settings")
+          .upsert(entry.payload as Record<string, unknown>, {
+            onConflict: "lender_id",
+          }));
       }
 
       if (error) {
         // A duplicate-key error (Postgres code 23505) means this exact
         // record already reached the server on an earlier attempt — e.g.
-        // the insert succeeded but the response was lost before we saw
-        // it. Treat that as synced instead of retrying it forever.
+        // the insert succeeded but the response was lost. Treat that as
+        // synced instead of retrying it forever. (Upserts don't hit this,
+        // but inserts can.)
         const isDuplicate = error.code === "23505";
         if (!isDuplicate) {
           lastError = error.message;
@@ -75,10 +90,13 @@ export async function pullFromServer(): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  const [loansResult, repaymentsResult] = await Promise.all([
-    supabase.from("loans").select("*"),
-    supabase.from("repayments").select("*"),
-  ]);
+  const [loansResult, repaymentsResult, dailyEntriesResult, settingsResult] =
+    await Promise.all([
+      supabase.from("loans").select("*"),
+      supabase.from("repayments").select("*"),
+      supabase.from("daily_entries").select("*"),
+      supabase.from("lender_settings").select("*"),
+    ]);
 
   // Upsert by id only — never delete local records. This preserves any
   // offline-created loan/repayment that hasn't synced yet, since it simply
@@ -88,6 +106,26 @@ export async function pullFromServer(): Promise<void> {
   }
   if (repaymentsResult.data) {
     await putRepayments(repaymentsResult.data as never[]);
+  }
+  if (dailyEntriesResult.data) {
+    await putDailyEntries(
+      dailyEntriesResult.data.map((d: Record<string, unknown>) => ({
+        entry_date: String(d.entry_date),
+        lender_id: String(d.lender_id),
+        opening_balance: Number(d.opening_balance),
+        expenses: Number(d.expenses),
+      }))
+    );
+  }
+  if (settingsResult.data && settingsResult.data[0]) {
+    const s = settingsResult.data[0] as Record<string, unknown>;
+    await putSettings({
+      lender_id: String(s.lender_id),
+      mamai_rate: Number(s.mamai_rate),
+      threshold_daily: Number(s.threshold_daily),
+      threshold_weekly: Number(s.threshold_weekly),
+      threshold_monthly: Number(s.threshold_monthly),
+    });
   }
 }
 

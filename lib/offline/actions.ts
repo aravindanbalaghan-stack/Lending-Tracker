@@ -5,9 +5,13 @@ import {
   putLoan,
   putLoans,
   putRepayment,
+  putDailyEntry,
+  putSettings,
   enqueueOutbox,
   type LoanRecord,
   type RepaymentRecord,
+  type DailyEntryRecord,
+  type SettingsRecord,
 } from "@/lib/offline/db";
 
 export async function getCurrentUserId(): Promise<string | null> {
@@ -71,6 +75,58 @@ export async function createRepaymentOffline(
     }
   } else {
     await enqueueOutbox("insert_repayment", repayment);
+  }
+
+  return { ok: true };
+}
+
+export async function saveDailyEntry(
+  entryDate: string,
+  values: { opening_balance: number; expenses: number }
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+
+  const entry: DailyEntryRecord = {
+    entry_date: entryDate,
+    lender_id: userId,
+    opening_balance: values.opening_balance,
+    expenses: values.expenses,
+  };
+
+  await putDailyEntry(entry);
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("daily_entries")
+      .upsert(entry, { onConflict: "lender_id,entry_date" });
+    if (error) await enqueueOutbox("upsert_daily_entry", entry);
+  } else {
+    await enqueueOutbox("upsert_daily_entry", entry);
+  }
+
+  return { ok: true };
+}
+
+export async function saveSettings(
+  values: Omit<SettingsRecord, "lender_id">
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+
+  const settings: SettingsRecord = { lender_id: userId, ...values };
+
+  await putSettings(settings);
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("lender_settings")
+      .upsert(settings, { onConflict: "lender_id" });
+    if (error) await enqueueOutbox("upsert_settings", settings);
+  } else {
+    await enqueueOutbox("upsert_settings", settings);
   }
 
   return { ok: true };
