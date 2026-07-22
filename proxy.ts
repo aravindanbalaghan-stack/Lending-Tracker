@@ -71,5 +71,14 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    // Run the auth middleware on everything EXCEPT:
+    //  - Next.js internals (_next/static, _next/image)
+    //  - the well-known folder (Digital Asset Links for the Android app)
+    //  - any request that has a file extension (.json, .js, .png, .ico, ...)
+    // The last point is the important one: it means manifest.json, sw.js,
+    // and all icons/screenshots serve as real static files instead of being
+    // intercepted by auth and returned as HTML (which broke PWABuilder).
+    "/((?!_next/static|_next/image|\\.well-known|[^?]*\\.[a-zA-Z0-9]+(?:$|\\?)).*)",
+  ],
 };
