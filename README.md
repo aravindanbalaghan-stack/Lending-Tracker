@@ -7,6 +7,89 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## PWA-ready for easy APK generation (latest)
+
+The app is now fully prepared to be packaged into an Android APK using
+**PWABuilder** (free, no Android Studio needed). See **PWA-APK-GUIDE.md**.
+
+What was added to make it pass cleanly:
+- Manifest now includes `id`, `scope`, `lang`, `dir`, `categories`, app
+  `shortcuts` (New Loan / Quick Repay), and `display_override`.
+- Proper **maskable icons** with safe-zone padding (`icon-192-maskable.png`,
+  `icon-512-maskable.png`) so the icon isn't clipped when Android crops it
+  to a circle.
+- **Screenshots** (mobile + desktop) for a richer install prompt.
+- A **Digital Asset Links** file at `public/.well-known/assetlinks.json`
+  (placeholder — you paste in the fingerprint PWABuilder gives you) so the
+  installed app runs full-screen with no browser address bar.
+
+The installed PWA keeps all existing behaviour: login, approval gate, offline
+support, per-user data isolation, and auto-update on deploy.
+
+## Approval gate, APK, and weekly backup (latest)
+
+### Approve users before they can access the app
+New sign-ups now land in a **"waiting for approval"** state and can't see any
+data until you approve them. How it works:
+- When someone registers, a row is auto-created in a `user_approvals` table
+  with status `pending`.
+- They're held on a waiting screen; the app won't let them reach any data
+  page, and the database itself (row-level security) also blocks their data
+  until approved — two layers.
+- **To approve someone:** open Supabase → Table Editor → `user_approvals`,
+  find their row (by email), and change `status` from `pending` to
+  `approved`. That's it — they can get in on their next check.
+- To block someone later, set their status to `blocked`.
+
+Run `supabase/migrations/006_approval_gate.sql` to enable this. Until you run
+it, the gate stays inactive and the app behaves as before (so nothing breaks
+if you deploy the code before running the migration). **Note:** you'll need
+to approve your own account once after enabling this.
+
+If you'd rather get an email or push notification on each signup instead of
+checking Supabase, that can be added — Supabase can fire a webhook on new
+rows — but it's a separate piece to wire up.
+
+### Android APK
+The project is now set up with Capacitor to build an installable Android APK.
+See **APK-BUILD-GUIDE.md** for the full steps. Key points:
+- The APK wraps your live web app, so login, the approval gate, offline
+  support, and per-user data isolation all work inside it exactly as on the
+  web.
+- **It auto-updates when you deploy** — you only rebuild the APK for name/icon
+  changes.
+- The actual `.apk` file must be compiled on your machine with Android Studio
+  (it can't be produced in the build environment here); everything is
+  configured and the commands are in the guide.
+
+### Automatic weekly backup
+Once a week, when you open the app, a bar appears offering to save a full
+backup of your data. Tap it and the app generates a dated JSON file — on a
+phone, the save sheet lets you send it straight to Google Drive; on desktop
+it goes to your downloads. It only prompts once per week per account.
+
+**Honest note on "automatic to Google Drive":** a version that silently
+uploads to your Drive every week *without you doing anything*, even when the
+app is closed, would need Google sign-in permissions, a stored access token,
+and a scheduled server job — a much larger piece of infrastructure. The
+in-app weekly prompt above gives you the same safety (a real weekly backup
+file) with a single tap and none of that complexity. If you later want the
+fully-silent Drive version, it can be built as a separate project.
+
+## Better Tamil transliteration
+
+The English→Tamil auto-suggestion was retrained against real name examples
+and is noticeably more accurate now. It correctly handles nasal sounds
+(Venkatesh → வெங்க...), the ச sound for "s" in names like Saranya →
+சரண்யா, and long vowels in common name endings (Kumar → குமார், Ramesh →
+ரமேஷ், Deepa → தீபா). It passes 13 of 14 names in the internal test set.
+
+It's still a best-effort phonetic tool, not perfect — a few genuinely
+ambiguous cases remain (e.g. a mid-word "t" that's retroflex in one name
+but dental in another can't be told apart from spelling alone). The Tamil
+name field stays fully editable everywhere, so any residual mismatch is a
+one-time fix that sticks.
+
 ## Borrowers grouped by date, and better Tamil names (latest)
 
 - **Borrowers list is now grouped by the date each loan was given** — one

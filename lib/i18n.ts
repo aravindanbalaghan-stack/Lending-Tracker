@@ -100,6 +100,15 @@ export const dictionary = {
     offline_pending: "change(s) waiting to sync",
     offline_syncNow: "Sync now",
     offline_syncError: "Last error",
+    pending_title: "Waiting for approval",
+    pending_body:
+      "Your account has been created and is waiting for the administrator to approve access. You'll be able to sign in once it's approved.",
+    pending_recheck: "Check again",
+    pending_checking: "Checking…",
+    pending_stillWaiting: "Not approved yet — please check back a little later.",
+    backup_weeklyPrompt: "It's been a week — time for your weekly backup.",
+    backup_weeklyNow: "Back up now",
+    backup_weeklyLater: "Later",
 
     backup_title: "Backup",
     backup_subtitle:
@@ -253,6 +262,15 @@ export const dictionary = {
     offline_pending: "மாற்றங்கள் ஒத்திசைவுக்காக காத்திருக்கின்றன",
     offline_syncNow: "இப்போது ஒத்திசை",
     offline_syncError: "கடைசி பிழை",
+    pending_title: "அனுமதிக்காக காத்திருக்கிறது",
+    pending_body:
+      "உங்கள் கணக்கு உருவாக்கப்பட்டு, நிர்வாகி அனுமதிக்க காத்திருக்கிறது. அனுமதிக்கப்பட்டதும் நீங்கள் உள்நுழையலாம்.",
+    pending_recheck: "மீண்டும் சரிபார்",
+    pending_checking: "சரிபார்க்கிறது…",
+    pending_stillWaiting: "இன்னும் அனுமதிக்கப்படவில்லை — சிறிது நேரம் கழித்து பார்க்கவும்.",
+    backup_weeklyPrompt: "ஒரு வாரம் ஆகிவிட்டது — வாராந்திர காப்புப்பிரதி எடுக்கும் நேரம்.",
+    backup_weeklyNow: "இப்போது காப்பு எடு",
+    backup_weeklyLater: "பிறகு",
 
     backup_title: "காப்புப்பிரதி",
     backup_subtitle:

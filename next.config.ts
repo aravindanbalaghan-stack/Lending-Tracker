@@ -20,6 +20,13 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      {
+        // The Digital Asset Links file must be served as JSON so Android can
+        // verify the installed app owns this domain (removes the browser
+        // address bar in the PWA/TWA). Lives at /.well-known/assetlinks.json.
+        source: "/.well-known/assetlinks.json",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
     ];
   },
 };

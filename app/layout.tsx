@@ -3,6 +3,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { OfflineProvider } from "@/components/OfflineProvider";
 import OfflineBanner from "@/components/OfflineBanner";
+import WeeklyBackup from "@/components/WeeklyBackup";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
@@ -43,6 +44,7 @@ export default function RootLayout({
           <OfflineProvider>
             <ServiceWorkerRegister />
             <OfflineBanner />
+            <WeeklyBackup />
             {children}
           </OfflineProvider>
         </LanguageProvider>
