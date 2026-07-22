@@ -1,7 +1,7 @@
 {
   "id": "/dashboard",
-  "name": "கணக்கு Book — Lending Ledger",
-  "short_name": "கணக்கு Book",
+  "name": "Kanakku Book — கணக்கு Book Lending Ledger",
+  "short_name": "Kanakku Book",
   "description": "Track borrowers, interest, and repayments — with daily cash totals, offline support, and Tamil name support.",
   "start_url": "/dashboard",
   "scope": "/",
