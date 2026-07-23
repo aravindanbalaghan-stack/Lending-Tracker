@@ -7,6 +7,7 @@ import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
 import EditLoanForm from "@/components/EditLoanForm";
+import RenewLoanPrompt from "@/components/RenewLoanPrompt";
 import { loansToCsv, downloadTextFile } from "@/lib/export";
 import { useLocalData } from "@/lib/offline/useLocalData";
 import { renameBorrowerOffline, updateRepaymentOffline } from "@/lib/offline/actions";
@@ -321,7 +322,8 @@ function LoanCard({
         </div>
       )}
 
-      <div className="px-4 py-3 bg-paper">
+      <div className="px-4 py-3 bg-paper space-y-3">
+        {outstanding <= 0 && <RenewLoanPrompt settledLoan={loan} />}
         {!showRepayForm ? (
           <button
             onClick={() => setShowRepayForm(true)}

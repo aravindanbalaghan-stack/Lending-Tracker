@@ -7,6 +7,7 @@ import { WEEKDAYS, scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { useLocalData } from "@/lib/offline/useLocalData";
+import { findDelayedLoans, delayedLoanIdSet } from "@/lib/delayed";
 
 type LoanEntry = {
   loanId: string;
@@ -28,7 +29,7 @@ const TABS: { key: ScheduleGroup; labelKey: TranslationKey }[] = [
 
 export default function BorrowersClient() {
   const { lang, t } = useLanguage();
-  const { loans, repayments, loading } = useLocalData();
+  const { loans, repayments, settings, loading } = useLocalData();
   const [activeTab, setActiveTab] = useState<ScheduleGroup>("daily");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -44,7 +45,15 @@ export default function BorrowersClient() {
       );
     }
 
+    // Loans past their allowed window live in the Delayed tab instead, so a
+    // borrower shows in exactly one list at a time. They return here
+    // automatically once the loan is settled or a new one is started.
+    const delayedIds = delayedLoanIdSet(
+      findDelayedLoans(loans, paidByLoanId, settings)
+    );
+
     return loans
+      .filter((l) => !delayedIds.has(l.id))
       .map((l) => ({
         loanId: l.id,
         name: l.borrower_name,
@@ -58,7 +67,7 @@ export default function BorrowersClient() {
         group: scheduleGroup(l.collection_schedule),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [loans, repayments]);
+  }, [loans, repayments, settings]);
 
   const counts = useMemo(() => {
     const c: Record<ScheduleGroup, number> = { daily: 0, weekly: 0, monthly: 0 };

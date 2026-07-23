@@ -7,6 +7,38 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Renewals, day breakdown, and delayed payments (latest)
+
+**Start a new loan when one is cleared.** When a borrower pays a loan off in
+full, a prompt appears on that loan offering to start a fresh one. Say yes,
+type the new amount, save — and a new loan is created for them carrying over
+their existing rate, schedule and installment count, dated today.
+
+> **A note on how this is stored:** the new loan is recorded as a *new* entry
+> for the same borrower rather than overwriting the settled one. Overwriting
+> would have broken the maths — every repayment is linked to its loan, so
+> resetting that loan's amount and date would make the old repayments count
+> against the new amount and the loan would look partly paid the moment it
+> was created. It would also erase the borrower's payment history. Because
+> the Borrowers list groups by person, the borrower still shows a single
+> entry with the new amount and today's date — which is the behaviour you
+> wanted — while the old record stays intact underneath for reference.
+
+**Dashboard day view now has two sections.** Clicking a date shows
+*Repayments received* (money in) and, below it, *New loans given* (money
+out), each with its own total.
+
+**New "Delayed payments" tab** (Tamil: நிப்பு புள்ளிகள்). Any loan still
+outstanding past its allowed window moves out of Borrowers and into this tab,
+so each borrower appears in exactly one place. The window uses the same
+per-schedule thresholds you configure on the dashboard — days for Daily,
+weeks for Weekly, months for Monthly. Record a repayment here; once the loan
+is fully cleared the borrower drops out of this tab automatically and the
+"start a new loan?" prompt appears, returning them to the normal Borrowers
+list.
+
+No database migration is needed for this update.
+
 ## PWA-ready for easy APK generation (latest)
 
 The app is now fully prepared to be packaged into an Android APK using

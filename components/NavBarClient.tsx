@@ -36,6 +36,9 @@ export default function NavBarClient({ hasUser }: { hasUser: boolean }) {
           <Link href="/repay" className="text-ink-soft hover:text-ink">
             {t("nav_repay")}
           </Link>
+          <Link href="/delayed" className="text-ink-soft hover:text-ink">
+            {t("nav_delayed")}
+          </Link>
           <Link href="/missed" className="text-ink-soft hover:text-ink">
             {t("nav_missed")}
           </Link>

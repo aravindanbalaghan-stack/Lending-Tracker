@@ -49,6 +49,17 @@ export default function DashboardClient() {
   );
   const selectedTotal = selectedRows.reduce((s, r) => s + r.amount, 0);
 
+  // Loans handed out on the selected date — shown as its own section under
+  // the repayments, so a day's money-in and money-out are both visible.
+  const selectedLoans = useMemo(
+    () => loans.filter((l) => dateKey(l.given_at) === selected),
+    [loans, selected]
+  );
+  const selectedLoansTotal = selectedLoans.reduce(
+    (s, l) => s + Number(l.principal),
+    0
+  );
+
   const entryForSelected = useMemo(
     () => dailyEntries.find((e) => e.entry_date === selected),
     [dailyEntries, selected]
@@ -92,12 +103,19 @@ export default function DashboardClient() {
               — {formatINR(selectedTotal)}
             </span>
           </h2>
+
+          <h3 className="text-xs font-medium uppercase tracking-wide text-ink-soft mb-1.5">
+            {t("dashboard_sectionRepayments")}{" "}
+            <span className="tabular normal-case text-forest">
+              {formatINR(selectedTotal)}
+            </span>
+          </h3>
           {selectedRows.length === 0 ? (
-            <p className="text-sm text-ink-soft italic">
+            <p className="text-sm text-ink-soft italic mb-5">
               {t("dashboard_noRepayments")}
             </p>
           ) : (
-            <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
+            <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden mb-5">
               {selectedRows.map((r) => (
                 <div
                   key={r.id}
@@ -122,6 +140,46 @@ export default function DashboardClient() {
                   </div>
                   <span className="tabular text-sm text-forest">
                     +{formatINR(r.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <h3 className="text-xs font-medium uppercase tracking-wide text-ink-soft mb-1.5">
+            {t("dashboard_sectionNewLoans")}{" "}
+            <span className="tabular normal-case text-rust">
+              {formatINR(selectedLoansTotal)}
+            </span>
+          </h3>
+          {selectedLoans.length === 0 ? (
+            <p className="text-sm text-ink-soft italic">
+              {t("dashboard_noNewLoans")}
+            </p>
+          ) : (
+            <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
+              {selectedLoans.map((l) => (
+                <div
+                  key={l.id}
+                  className="flex items-center justify-between px-4 py-3"
+                >
+                  <div>
+                    <Link
+                      href={`/borrowers/${encodeURIComponent(l.borrower_name)}`}
+                      className="text-sm text-ink hover:text-forest hover:underline underline-offset-2"
+                    >
+                      {l.borrower_name}
+                      {l.borrower_name_ta && (
+                        <span className="text-ink-soft"> · {l.borrower_name_ta}</span>
+                      )}
+                    </Link>
+                    <p className="text-xs text-ink-soft">
+                      {l.interest_rate}% · {l.installments_count}× ·{" "}
+                      {l.collection_schedule}
+                    </p>
+                  </div>
+                  <span className="tabular text-sm text-rust">
+                    −{formatINR(Number(l.principal))}
                   </span>
                 </div>
               ))}
