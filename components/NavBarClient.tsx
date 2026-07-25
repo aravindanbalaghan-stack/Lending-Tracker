@@ -28,7 +28,7 @@ const DESKTOP_LINKS: { href: string; labelKey: TranslationKey }[] = [
 ];
 
 export default function NavBarClient({ hasUser }: { hasUser: boolean }) {
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
   const pathname = usePathname();
 
   function isActive(href: string) {
@@ -68,26 +68,6 @@ export default function NavBarClient({ hasUser }: { hasUser: boolean }) {
               {t("nav_newLoan")}
             </Link>
           </nav>
-
-          {/* Language toggle — always visible */}
-          <div className="flex rounded-md border border-ledger-line overflow-hidden text-xs shrink-0">
-            <button
-              onClick={() => setLang("en")}
-              className={`px-2 py-1 ${
-                lang === "en" ? "bg-forest text-white" : "text-ink-soft"
-              }`}
-            >
-              EN
-            </button>
-            <button
-              onClick={() => setLang("ta")}
-              className={`px-2 py-1 ${
-                lang === "ta" ? "bg-forest text-white" : "text-ink-soft"
-              }`}
-            >
-              த
-            </button>
-          </div>
         </div>
       </header>
 

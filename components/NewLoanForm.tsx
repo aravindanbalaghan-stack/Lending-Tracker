@@ -40,11 +40,25 @@ export default function NewLoanForm() {
   function handleNameChange(value: string) {
     setBorrowerName(value);
     if (tamilTouched) return;
+
+    const trimmed = value.trim();
+
+    // If the name itself is already typed in Tamil script, don't run the
+    // English→Tamil transliterator on it (it would produce garbage). Leave
+    // the Tamil field empty so it isn't populated with a bad guess — the
+    // user is clearly entering Tamil directly.
+    const hasTamil = /[\u0B80-\u0BFF]/.test(trimmed);
+    if (hasTamil) {
+      setBorrowerNameTa("");
+      return;
+    }
+
     // If this name already belongs to an existing borrower, reuse their
     // Tamil name instead of re-guessing it, so it stays consistent.
-    const existing = loans.find((l) => l.borrower_name === value.trim());
+    const existing = loans.find((l) => l.borrower_name === trimmed);
     setBorrowerNameTa(
-      existing?.borrower_name_ta || (value.trim() ? transliterateToTamil(value.trim()) : "")
+      existing?.borrower_name_ta ||
+        (trimmed ? transliterateToTamil(trimmed) : "")
     );
   }
 

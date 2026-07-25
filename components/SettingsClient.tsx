@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { ensureLocalDataMatchesUser } from "@/lib/offline/db";
+import { getLastBackup } from "@/lib/lastBackup";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function SettingsClient() {
   const { lang, setLang, t } = useLanguage();
   const [email, setEmail] = useState<string | null>(null);
+  const [lastBackup, setLastBackupState] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -17,8 +19,18 @@ export default function SettingsClient() {
         data: { user },
       } = await supabase.auth.getUser();
       setEmail(user?.email ?? null);
+      if (user?.id) setLastBackupState(getLastBackup(user.id));
     })();
   }, []);
+
+  const locale = lang === "ta" ? "ta-IN" : "en-IN";
+  const lastBackupText = lastBackup
+    ? new Date(lastBackup).toLocaleDateString(locale, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : t("settings_backupNever");
 
   async function handleSignOut() {
     await ensureLocalDataMatchesUser(null);
@@ -46,7 +58,12 @@ export default function SettingsClient() {
           href="/backup"
           className="flex items-center justify-between px-4 py-3.5 hover:bg-paper transition"
         >
-          <span className="text-sm text-ink">{t("nav_backup")}</span>
+          <span>
+            <span className="text-sm text-ink">{t("nav_backup")}</span>
+            <span className="block text-xs text-ink-soft">
+              {t("settings_lastBackup")}: {lastBackupText}
+            </span>
+          </span>
           <span className="text-ink-soft">›</span>
         </Link>
         <Link

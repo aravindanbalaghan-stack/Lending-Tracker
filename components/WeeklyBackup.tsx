@@ -5,12 +5,9 @@ import { useLocalData } from "@/lib/offline/useLocalData";
 import { loansToJson, downloadTextFile, type BackupLoan } from "@/lib/export";
 import { getCurrentUserId } from "@/lib/offline/actions";
 import { useLanguage } from "@/components/LanguageProvider";
+import { getLastBackup, setLastBackup } from "@/lib/lastBackup";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-function lastBackupKey(userId: string) {
-  return `kanakku-last-backup:${userId}`;
-}
 
 // Builds the backup payload from local data and hands it to the user as a
 // downloadable JSON file. On mobile, the OS share/save sheet lets them send
@@ -33,13 +30,7 @@ export default function WeeklyBackup() {
     (async () => {
       const userId = await getCurrentUserId();
       if (!userId) return;
-      let last = 0;
-      try {
-        const raw = localStorage.getItem(lastBackupKey(userId));
-        last = raw ? parseInt(raw) : 0;
-      } catch {
-        last = 0;
-      }
+      const last = getLastBackup(userId) ?? 0;
       if (Date.now() - last >= WEEK_MS) {
         setDue(true);
       }
@@ -80,22 +71,14 @@ export default function WeeklyBackup() {
       "application/json"
     );
 
-    try {
-      localStorage.setItem(lastBackupKey(userId), String(Date.now()));
-    } catch {
-      // ignore storage errors
-    }
+    setLastBackup(userId);
     setDue(false);
   }
 
   async function dismiss() {
     const userId = await getCurrentUserId();
     if (userId) {
-      try {
-        localStorage.setItem(lastBackupKey(userId), String(Date.now()));
-      } catch {
-        // ignore
-      }
+      setLastBackup(userId);
     }
     setDue(false);
   }

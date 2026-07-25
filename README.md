@@ -7,6 +7,23 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Refinements (latest)
+
+- **Removed the duplicate language toggle** from the top bar — language now
+  lives only in Settings.
+- **Smarter Tamil name handling** — if you type the borrower's name directly
+  in Tamil script, the separate Tamil field is left empty instead of being
+  filled with a wrong auto-guess. Transliteration only runs when you type in
+  English, as intended.
+- **Faster tab switching** — local data now loads once at app start and is
+  shared across every screen, instead of each tab re-reading the local
+  database and briefly showing a blank screen. Moving between tabs is now
+  instant.
+- **Last backup date in Settings** — the Backup row shows when you last
+  backed up. Both the weekly auto-backup and any manual backup update it.
+
+No database migration is needed for this update.
+
 ## Mobile view, settings, password reset (latest)
 
 **Cleaner mobile layout.** On phones the crowded top row of links is replaced

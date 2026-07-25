@@ -89,9 +89,14 @@ export default function BorrowerDetailClient() {
 
   function handleNewNameChange(value: string) {
     setNewName(value);
-    if (!tamilTouched) {
-      setNewNameTa(value.trim() ? transliterateToTamil(value.trim()) : "");
+    if (tamilTouched) return;
+    const trimmed = value.trim();
+    // Don't transliterate a name already typed in Tamil script.
+    if (/[\u0B80-\u0BFF]/.test(trimmed)) {
+      setNewNameTa("");
+      return;
     }
+    setNewNameTa(trimmed ? transliterateToTamil(trimmed) : "");
   }
 
   async function handleRenameSave() {

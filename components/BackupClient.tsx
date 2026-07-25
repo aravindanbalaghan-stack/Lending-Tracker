@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { loansToCsv, loansToJson, downloadTextFile, type BackupLoan } from "@/lib/export";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useLocalData } from "@/lib/offline/useLocalData";
+import { getCurrentUserId } from "@/lib/offline/actions";
+import { setLastBackup } from "@/lib/lastBackup";
 
 export default function BackupClient() {
   const { t } = useLanguage();
@@ -35,6 +37,11 @@ export default function BackupClient() {
     }));
   }, [allLoans, allRepayments]);
 
+  async function recordBackup() {
+    const userId = await getCurrentUserId();
+    if (userId) setLastBackup(userId);
+  }
+
   function handleCsv() {
     const csv = loansToCsv(loans);
     downloadTextFile(
@@ -42,6 +49,7 @@ export default function BackupClient() {
       csv,
       "text/csv"
     );
+    recordBackup();
   }
 
   function handleJson() {
@@ -51,6 +59,7 @@ export default function BackupClient() {
       json,
       "application/json"
     );
+    recordBackup();
   }
 
   if (loading) return null;

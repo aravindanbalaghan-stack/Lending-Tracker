@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { OfflineProvider } from "@/components/OfflineProvider";
+import { LocalDataProvider } from "@/components/LocalDataProvider";
 import OfflineBanner from "@/components/OfflineBanner";
 import WeeklyBackup from "@/components/WeeklyBackup";
 import NewLoanFab from "@/components/NewLoanFab";
@@ -51,11 +52,13 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col pb-16 md:pb-0">
         <LanguageProvider>
           <OfflineProvider>
-            <ServiceWorkerRegister />
-            <OfflineBanner />
-            <WeeklyBackup />
-            {children}
-            <NewLoanFab />
+            <LocalDataProvider>
+              <ServiceWorkerRegister />
+              <OfflineBanner />
+              <WeeklyBackup />
+              {children}
+              <NewLoanFab />
+            </LocalDataProvider>
           </OfflineProvider>
         </LanguageProvider>
       </body>
