@@ -7,6 +7,28 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Mobile view, settings, password reset (latest)
+
+**Cleaner mobile layout.** On phones the crowded top row of links is replaced
+by a **bottom tab bar** (Dashboard, Borrowers, Repay, Delayed, Settings) —
+the pattern native apps use — plus a floating **+** button for a new loan.
+Desktop keeps the full top navigation unchanged.
+
+**New Settings tab** with: the signed-in email, links to Backup and Import,
+the language switch, and sign out. (Import and Backup still work from the
+desktop top bar too.)
+
+**Password reset.** The login screen now has a "Forgot password?" link. It
+emails a reset link that opens a new *Set a new password* screen. This relies
+on email delivery being configured — see EMAIL-SETUP-GUIDE.md.
+
+**Email/signup limit (important):** the 2-signups issue is a Supabase email
+limit, not an app bug. The fix is connecting a free email provider (custom
+SMTP), which keeps verification ON and also powers password resets. Full
+steps in EMAIL-SETUP-GUIDE.md — it's a ~15-minute dashboard setup, no code.
+
+No database migration is needed for this update.
+
 ## Renewals, day breakdown, and delayed payments (latest)
 
 **Start a new loan when one is cleared.** When a borrower pays a loan off in

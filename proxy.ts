@@ -30,7 +30,8 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthPage = path.startsWith("/login");
+  const isAuthPage =
+    path.startsWith("/login") || path.startsWith("/reset-password");
   const isPendingPage = path.startsWith("/pending");
 
   if (!user && !isAuthPage) {
@@ -54,13 +55,14 @@ export async function proxy(request: NextRequest) {
     }
 
     const approved = status === "approved";
+    const isResetPage = path.startsWith("/reset-password");
 
-    if (!approved && !isPendingPage) {
+    if (!approved && !isPendingPage && !isResetPage) {
       const url = request.nextUrl.clone();
       url.pathname = "/pending";
       return NextResponse.redirect(url);
     }
-    if (approved && (isAuthPage || isPendingPage)) {
+    if (approved && (isAuthPage || isPendingPage) && !isResetPage) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);

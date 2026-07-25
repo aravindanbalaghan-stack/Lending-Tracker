@@ -16,6 +16,26 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  async function handleForgotPassword() {
+    setError(null);
+    setMessage(null);
+    if (!email.trim()) {
+      setError(t("login_enterEmailFirst"));
+      return;
+    }
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage(t("login_resetSent"));
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -94,6 +114,16 @@ export default function LoginPage() {
 
           {error && <p className="text-sm text-rust">{error}</p>}
           {message && <p className="text-sm text-forest">{message}</p>}
+
+          {mode === "signin" && (
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-xs text-forest underline underline-offset-2"
+            >
+              {t("login_forgotPassword")}
+            </button>
+          )}
 
           <button
             type="submit"

@@ -4,6 +4,7 @@ import { LanguageProvider } from "@/components/LanguageProvider";
 import { OfflineProvider } from "@/components/OfflineProvider";
 import OfflineBanner from "@/components/OfflineBanner";
 import WeeklyBackup from "@/components/WeeklyBackup";
+import NewLoanFab from "@/components/NewLoanFab";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
@@ -47,13 +48,14 @@ export default function RootLayout({
         <meta name="theme-color" content="#1b4332" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col pb-16 md:pb-0">
         <LanguageProvider>
           <OfflineProvider>
             <ServiceWorkerRegister />
             <OfflineBanner />
             <WeeklyBackup />
             {children}
+            <NewLoanFab />
           </OfflineProvider>
         </LanguageProvider>
       </body>
