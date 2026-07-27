@@ -11,6 +11,8 @@ import {
   enqueueOutbox,
   getAllLoans,
   getAllRepayments,
+  deleteLoanLocal,
+  deleteRepaymentsForLoanLocal,
   type LoanRecord,
   type RepaymentRecord,
   type DailyEntryRecord,
@@ -26,7 +28,7 @@ export async function getCurrentUserId(): Promise<string | null> {
 }
 
 export async function createLoanOffline(
-  input: Omit<LoanRecord, "id" | "lender_id">
+  input: Omit<LoanRecord, "id" | "lender_id" | "deleted_at">
 ): Promise<{ ok: boolean; error?: string; id?: string }> {
   const userId = await getCurrentUserId();
   if (!userId) return { ok: false, error: "You must be signed in." };
@@ -34,6 +36,7 @@ export async function createLoanOffline(
   const loan: LoanRecord = {
     id: crypto.randomUUID(),
     lender_id: userId,
+    deleted_at: null,
     ...input,
   };
 
@@ -168,7 +171,7 @@ export async function updateLoanOffline(
   loanId: string,
   changes: Omit<
     LoanRecord,
-    "id" | "lender_id" | "borrower_name" | "borrower_name_ta"
+    "id" | "lender_id" | "borrower_name" | "borrower_name_ta" | "deleted_at"
   >
 ): Promise<{ ok: boolean; error?: string }> {
   const userId = await getCurrentUserId();
@@ -194,6 +197,128 @@ export async function updateLoanOffline(
   }
 
   return { ok: true };
+}
+
+// Soft-delete: mark the loan with a deletion timestamp instead of removing
+// it. It vanishes from all normal views but stays in the database so it can
+// be restored from the Deleted-records bin within 8 days.
+export async function softDeleteLoanOffline(
+  loanId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+
+  const existing = (await getAllLoans()).find((l) => l.id === loanId);
+  if (!existing) return { ok: false, error: "Loan not found locally." };
+
+  const deletedAt = new Date().toISOString();
+  await putLoan({ ...existing, deleted_at: deletedAt });
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("loans")
+      .update({ deleted_at: deletedAt })
+      .eq("id", loanId);
+    if (error) {
+      await enqueueOutbox("update_loan", {
+        id: loanId,
+        changes: { deleted_at: deletedAt },
+      });
+    }
+  } else {
+    await enqueueOutbox("update_loan", {
+      id: loanId,
+      changes: { deleted_at: deletedAt },
+    });
+  }
+
+  return { ok: true };
+}
+
+// Restore a soft-deleted loan: clear its deletion timestamp. Because
+// repayments were never touched (they stay attached to the loan by loan_id),
+// the borrower reappears with all their history exactly as before.
+export async function restoreLoanOffline(
+  loanId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+
+  const existing = (await getAllLoans()).find((l) => l.id === loanId);
+  if (!existing) return { ok: false, error: "Loan not found locally." };
+
+  await putLoan({ ...existing, deleted_at: null });
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("loans")
+      .update({ deleted_at: null })
+      .eq("id", loanId);
+    if (error) {
+      await enqueueOutbox("update_loan", {
+        id: loanId,
+        changes: { deleted_at: null },
+      });
+    }
+  } else {
+    await enqueueOutbox("update_loan", {
+      id: loanId,
+      changes: { deleted_at: null },
+    });
+  }
+
+  return { ok: true };
+}
+
+// Permanently remove loans (and their repayments) whose deletion is older
+// than the retention window. Runs client-side on app open; also available as
+// a manual "delete now" from the bin. This is a real, irreversible delete.
+export async function purgeExpiredLoansOffline(
+  retentionDays = 8
+): Promise<{ ok: boolean; purged: number }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, purged: 0 };
+
+  const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+  const expired = (await getAllLoans()).filter(
+    (l) => l.deleted_at && new Date(l.deleted_at).getTime() < cutoff
+  );
+  if (expired.length === 0) return { ok: true, purged: 0 };
+
+  for (const loan of expired) {
+    await hardDeleteLoanLocalAndRemote(loan.id);
+  }
+  return { ok: true, purged: expired.length };
+}
+
+// Immediately, permanently delete one loan and its repayments (used by the
+// "Delete permanently" button in the bin, and by the purge above).
+export async function hardDeleteLoanOffline(
+  loanId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+  await hardDeleteLoanLocalAndRemote(loanId);
+  return { ok: true };
+}
+
+async function hardDeleteLoanLocalAndRemote(loanId: string): Promise<void> {
+  await deleteLoanLocal(loanId);
+  await deleteRepaymentsForLoanLocal(loanId);
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    // Repayments cascade-delete in the DB via the foreign key, but we delete
+    // explicitly too so an offline-queued action is unambiguous.
+    const { error } = await supabase.from("loans").delete().eq("id", loanId);
+    if (error) {
+      await enqueueOutbox("hard_delete_loan", { id: loanId });
+    }
+  } else {
+    await enqueueOutbox("hard_delete_loan", { id: loanId });
+  }
 }
 
 export async function updateRepaymentOffline(
@@ -275,7 +400,7 @@ export async function renameBorrowerOffline(
 }
 
 export async function createLoansBulkOffline(
-  inputs: Omit<LoanRecord, "id" | "lender_id">[]
+  inputs: Omit<LoanRecord, "id" | "lender_id" | "deleted_at">[]
 ): Promise<{ ok: boolean; count: number; error?: string }> {
   const userId = await getCurrentUserId();
   if (!userId) return { ok: false, count: 0, error: "You must be signed in." };
@@ -283,6 +408,7 @@ export async function createLoansBulkOffline(
   const loans: LoanRecord[] = inputs.map((i) => ({
     id: crypto.randomUUID(),
     lender_id: userId,
+    deleted_at: null,
     ...i,
   }));
 

@@ -55,6 +55,12 @@ export async function processOutbox(): Promise<{
           .from("loans")
           .update(payload.changes)
           .eq("id", payload.id));
+      } else if (entry.type === "hard_delete_loan") {
+        const payload = entry.payload as { id: string };
+        ({ error } = await supabase
+          .from("loans")
+          .delete()
+          .eq("id", payload.id));
       } else if (entry.type === "update_repayment") {
         const payload = entry.payload as {
           id: string;

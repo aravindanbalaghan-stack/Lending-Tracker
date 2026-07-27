@@ -10,7 +10,7 @@ import EditLoanForm from "@/components/EditLoanForm";
 import RenewLoanPrompt from "@/components/RenewLoanPrompt";
 import { loansToCsv, downloadTextFile } from "@/lib/export";
 import { useLocalData } from "@/lib/offline/useLocalData";
-import { renameBorrowerOffline, updateRepaymentOffline } from "@/lib/offline/actions";
+import { renameBorrowerOffline, updateRepaymentOffline, softDeleteLoanOffline } from "@/lib/offline/actions";
 import { transliterateToTamil } from "@/lib/transliterate";
 import type { LoanRecord } from "@/lib/offline/db";
 
@@ -243,6 +243,15 @@ function LoanCard({
   const [editingRepaymentId, setEditingRepaymentId] = useState<string | null>(
     null
   );
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    await softDeleteLoanOffline(loan.id);
+    // The shared data provider refreshes automatically; the card disappears
+    // from the active list and moves into the Deleted-records bin.
+  }
 
   const totalPaid = loan.repayments.reduce((s, r) => s + Number(r.amount), 0);
   const outstanding = Number(loan.payback_amount) - totalPaid;
@@ -288,12 +297,39 @@ function LoanCard({
           </div>
         </div>
         {!showEditForm ? (
-          <button
-            onClick={() => setShowEditForm(true)}
-            className="text-xs text-forest underline underline-offset-2 mt-2"
-          >
-            {t("detail_editLoan")}
-          </button>
+          <div className="mt-2 flex items-center gap-4">
+            <button
+              onClick={() => setShowEditForm(true)}
+              className="text-xs text-forest underline underline-offset-2"
+            >
+              {t("detail_editLoan")}
+            </button>
+            {!confirmDelete ? (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="text-xs text-rust underline underline-offset-2"
+              >
+                {t("detail_deleteLoan")}
+              </button>
+            ) : (
+              <span className="text-xs text-ink-soft inline-flex items-center gap-2">
+                {t("detail_deleteConfirm")}
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-rust font-medium underline underline-offset-2 disabled:opacity-50"
+                >
+                  {t("detail_deleteYes")}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-ink-soft"
+                >
+                  {t("detail_cancel")}
+                </button>
+              </span>
+            )}
+          </div>
         ) : (
           <EditLoanForm
             loan={loan}

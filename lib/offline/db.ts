@@ -10,6 +10,7 @@ export type LoanRecord = {
   lender_id: string;
   borrower_name: string;
   borrower_name_ta: string | null;
+  deleted_at: string | null;
   principal: number;
   interest_rate: number;
   payback_amount: number;
@@ -52,6 +53,7 @@ export type OutboxEntry = {
     | "insert_repayments_bulk"
     | "update_loan"
     | "update_repayment"
+    | "hard_delete_loan"
     | "rename_borrower"
     | "upsert_daily_entry"
     | "upsert_settings";
@@ -145,6 +147,23 @@ export async function putRepayments(repayments: RepaymentRecord[]) {
   const db = await getDb();
   const tx = db.transaction("repayments", "readwrite");
   await Promise.all(repayments.map((r) => tx.store.put(r)));
+  await tx.done;
+  notify();
+}
+
+export async function deleteLoanLocal(loanId: string) {
+  const db = await getDb();
+  await db.delete("loans", loanId);
+  notify();
+}
+
+export async function deleteRepaymentsForLoanLocal(loanId: string) {
+  const db = await getDb();
+  const all = await db.getAll("repayments");
+  const toDelete = all.filter((r) => r.loan_id === loanId);
+  if (toDelete.length === 0) return;
+  const tx = db.transaction("repayments", "readwrite");
+  await Promise.all(toDelete.map((r) => tx.store.delete(r.id)));
   await tx.done;
   notify();
 }

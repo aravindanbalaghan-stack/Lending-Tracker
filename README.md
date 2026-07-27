@@ -7,6 +7,30 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Delete with recycle bin (latest)
+
+Loans can now be deleted, with a safety net:
+
+- Each loan on a borrower's page has a **Delete** button that asks for
+  confirmation first.
+- Deleting doesn't remove anything immediately — the loan (with all its
+  repayments) moves to a **Deleted records** bin in Settings, and disappears
+  from every normal screen.
+- The bin shows a **countdown** for each item ("N days left before permanent
+  deletion").
+- **Restore** brings the borrower back exactly as before — every repayment
+  and detail intact, because nothing was actually removed, just hidden.
+- After **8 days**, deleted loans are permanently purged automatically (this
+  happens both on app open and when the bin is viewed). There's also a manual
+  "Delete now" with its own confirmation for immediate permanent removal.
+
+### Database change required
+Run `supabase/migrations/007_soft_delete.sql` in Supabase's SQL Editor. It
+adds a `deleted_at` column to loans and touches nothing existing. The file
+also contains an OPTIONAL server-side auto-purge (pg_cron) you can enable if
+you want purging to happen even when nobody opens the app — not required, the
+app handles it client-side.
+
 ## Mobile polish, IST time, and renew fix (latest)
 
 **Mobile date picker instead of calendar.** On phones the dashboard now shows

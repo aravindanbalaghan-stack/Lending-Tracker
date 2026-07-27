@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { ensureLocalDataMatchesUser } from "@/lib/offline/db";
 import { getLastBackup } from "@/lib/lastBackup";
+import DeletedRecords from "@/components/DeletedRecords";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function SettingsClient() {
@@ -99,6 +100,10 @@ export default function SettingsClient() {
             தமிழ்
           </button>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <DeletedRecords />
       </div>
 
       <button
