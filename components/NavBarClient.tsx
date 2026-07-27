@@ -9,11 +9,11 @@ import type { TranslationKey } from "@/lib/i18n";
 // desktop. Secondary items (Missed, Import, Backup) live under Settings to
 // keep the mobile screen uncluttered.
 const PRIMARY: { href: string; labelKey: TranslationKey; icon: string }[] = [
-  { href: "/dashboard", labelKey: "nav_dashboard", icon: "▤" },
-  { href: "/borrowers", labelKey: "nav_borrowers", icon: "☰" },
-  { href: "/repay", labelKey: "nav_repay", icon: "₹" },
-  { href: "/delayed", labelKey: "nav_delayed", icon: "⏱" },
-  { href: "/settings", labelKey: "nav_settings", icon: "⚙" },
+  { href: "/dashboard", labelKey: "tab_dashboard", icon: "▤" },
+  { href: "/borrowers", labelKey: "tab_borrowers", icon: "☰" },
+  { href: "/repay", labelKey: "tab_repay", icon: "₹" },
+  { href: "/delayed", labelKey: "tab_delayed", icon: "⏱" },
+  { href: "/settings", labelKey: "tab_settings", icon: "⚙" },
 ];
 
 const DESKTOP_LINKS: { href: string; labelKey: TranslationKey }[] = [
@@ -22,8 +22,6 @@ const DESKTOP_LINKS: { href: string; labelKey: TranslationKey }[] = [
   { href: "/repay", labelKey: "nav_repay" },
   { href: "/delayed", labelKey: "nav_delayed" },
   { href: "/missed", labelKey: "nav_missed" },
-  { href: "/import", labelKey: "nav_import" },
-  { href: "/backup", labelKey: "nav_backup" },
   { href: "/settings", labelKey: "nav_settings" },
 ];
 
@@ -73,19 +71,23 @@ export default function NavBarClient({ hasUser }: { hasUser: boolean }) {
 
       {/* Mobile bottom tab bar — hidden on desktop */}
       {hasUser && (
-        <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-ledger-line flex items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
+        <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-ledger-line grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
           {PRIMARY.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 ${
+                className={`relative flex flex-col items-center justify-center py-2 px-0.5 min-w-0 ${
                   active ? "text-forest" : "text-ink-soft"
                 }`}
               >
-                <span className="text-lg leading-none">{item.icon}</span>
-                <span className="text-[10px] leading-none">
+                {/* Active highlighter bar across the top of the tab */}
+                {active && (
+                  <span className="absolute top-0 inset-x-2 h-0.5 rounded-full bg-forest" />
+                )}
+                <span className="text-lg leading-none mb-0.5">{item.icon}</span>
+                <span className="text-[10px] leading-tight text-center truncate w-full">
                   {t(item.labelKey)}
                 </span>
               </Link>

@@ -358,7 +358,7 @@ export default function ImportWizard() {
                     <p className="text-ink">{loan.borrower_name}</p>
                     <p className="text-xs text-ink-soft">
                       {loan.interest_rate}% · {loan.collection_schedule} ·{" "}
-                      {new Date(loan.given_at).toLocaleDateString()}
+                      {new Date(loan.given_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}
                     </p>
                   </div>
                   <span className="tabular text-ink">
@@ -381,7 +381,7 @@ export default function ImportWizard() {
                   <div>
                     <p className="text-ink">{p.borrower_name}</p>
                     <p className="text-xs text-ink-soft">
-                      {new Date(p.paid_at).toLocaleDateString()}
+                      {new Date(p.paid_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}
                     </p>
                   </div>
                   <span className="tabular text-forest">

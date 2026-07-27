@@ -26,6 +26,7 @@ export default function SettingsClient() {
   const locale = lang === "ta" ? "ta-IN" : "en-IN";
   const lastBackupText = lastBackup
     ? new Date(lastBackup).toLocaleDateString(locale, {
+                      timeZone: "Asia/Kolkata",
         day: "numeric",
         month: "short",
         year: "numeric",

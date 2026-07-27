@@ -46,6 +46,7 @@ export default function MiniCalendar({
         </button>
         <p className="text-sm font-medium text-ink">
           {viewDate.toLocaleDateString(undefined, {
+                      timeZone: "Asia/Kolkata",
             month: "long",
             year: "numeric",
           })}

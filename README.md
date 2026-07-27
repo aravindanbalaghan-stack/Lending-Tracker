@@ -7,6 +7,32 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Mobile polish, IST time, and renew fix (latest)
+
+**Mobile date picker instead of calendar.** On phones the dashboard now shows
+three compact Day / Month / Year dropdowns (defaulting to today) instead of
+the full calendar grid, which was cramped. Desktop keeps the calendar.
+
+**All times are now IST.** Date/day logic was reworked to use Asia/Kolkata
+consistently, so a repayment made late at night is filed under the correct
+Indian calendar day regardless of the device or server timezone. All
+displayed dates and times now show in IST too.
+
+**Import & Backup removed from the top bar** — they live in Settings only now
+(reachable there and on the desktop Settings page).
+
+**Fixed the mobile bottom tabs.** Equal-width columns, no more label
+overlap/misalignment, short labels that fit, and a small highlighter bar above
+the active tab so you can see which screen you're on. (Kept at the bottom —
+that's the right place for mobile; left-side tabs would hide navigation
+behind an extra tap.)
+
+**Renew prompt fix.** A settled loan no longer shows the "start a new loan?"
+option if the borrower already has another open loan. Once you create a new
+loan for an old borrower, their old settled loan stops offering to renew.
+
+No database migration is needed for this update.
+
 ## Refinements (latest)
 
 - **Removed the duplicate language toggle** from the top bar — language now

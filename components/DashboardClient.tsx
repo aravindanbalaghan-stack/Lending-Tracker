@@ -7,6 +7,7 @@ import { computeDaySummary } from "@/lib/dailyDetails";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useLocalData } from "@/lib/offline/useLocalData";
 import MiniCalendar from "@/components/MiniCalendar";
+import MobileDatePicker from "@/components/MobileDatePicker";
 import DailyDetailsCard from "@/components/DailyDetailsCard";
 
 type RepaymentRow = {
@@ -94,6 +95,7 @@ export default function DashboardClient() {
         <div className="flex-1 order-2 md:order-1">
           <h2 className="text-sm font-medium text-ink-soft mb-2">
             {new Date(selected).toLocaleDateString(locale, {
+                      timeZone: "Asia/Kolkata",
               weekday: "long",
               day: "numeric",
               month: "long",
@@ -133,6 +135,7 @@ export default function DashboardClient() {
                     </Link>
                     <p className="text-xs text-ink-soft">
                       {new Date(r.paid_at).toLocaleTimeString(locale, {
+                      timeZone: "Asia/Kolkata",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -188,11 +191,17 @@ export default function DashboardClient() {
         </div>
 
         <div className="order-1 md:order-2 md:ml-auto">
-          <MiniCalendar
-            selected={selected}
-            onSelect={setSelected}
-            markedDates={markedDates}
-          />
+          {/* Desktop: full calendar. Mobile: compact D/M/Y pickers. */}
+          <div className="hidden md:block">
+            <MiniCalendar
+              selected={selected}
+              onSelect={setSelected}
+              markedDates={markedDates}
+            />
+          </div>
+          <div className="md:hidden">
+            <MobileDatePicker selected={selected} onSelect={setSelected} />
+          </div>
         </div>
       </div>
 

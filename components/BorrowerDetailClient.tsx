@@ -63,6 +63,20 @@ export default function BorrowerDetailClient() {
       );
   }, [allLoans, allRepayments, borrowerName]);
 
+  // Does this borrower currently have ANY loan still outstanding? If so, the
+  // renew prompt is suppressed on their settled loans — you don't offer to
+  // start a new loan for someone who already has an open one (that's what
+  // #5 asked for: after a new loan is created, the old settled loan should
+  // stop showing the renew option).
+  const hasOpenLoan = useMemo(
+    () =>
+      loans.some((l) => {
+        const paid = l.repayments.reduce((s, r) => s + Number(r.amount), 0);
+        return Number(l.payback_amount) - paid > 0;
+      }),
+    [loans]
+  );
+
   function handleDownload() {
     const csv = loansToCsv(
       loans.map((loan) => ({
@@ -199,7 +213,13 @@ export default function BorrowerDetailClient() {
       ) : (
         <div className="space-y-6">
           {loans.map((loan) => (
-            <LoanCard key={loan.id} loan={loan} locale={locale} t={t} />
+            <LoanCard
+              key={loan.id}
+              loan={loan}
+              locale={locale}
+              t={t}
+              borrowerHasOpenLoan={hasOpenLoan}
+            />
           ))}
         </div>
       )}
@@ -211,10 +231,12 @@ function LoanCard({
   loan,
   locale,
   t,
+  borrowerHasOpenLoan,
 }: {
   loan: LoanWithRepayments;
   locale: string;
   t: (key: TranslationKey) => string;
+  borrowerHasOpenLoan: boolean;
 }) {
   const [showRepayForm, setShowRepayForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -236,6 +258,7 @@ function LoanCard({
           <div>
             <p className="text-xs text-ink-soft">
               {new Date(loan.given_at).toLocaleDateString(locale, {
+                      timeZone: "Asia/Kolkata",
                 day: "numeric",
                 month: "short",
                 year: "numeric",
@@ -299,6 +322,7 @@ function LoanCard({
                 <div>
                   <span className="text-ink-soft">
                     {new Date(r.paid_at).toLocaleString(locale, {
+                      timeZone: "Asia/Kolkata",
                       day: "numeric",
                       month: "short",
                       year: "numeric",
@@ -328,7 +352,9 @@ function LoanCard({
       )}
 
       <div className="px-4 py-3 bg-paper space-y-3">
-        {outstanding <= 0 && <RenewLoanPrompt settledLoan={loan} />}
+        {outstanding <= 0 && !borrowerHasOpenLoan && (
+          <RenewLoanPrompt settledLoan={loan} />
+        )}
         {!showRepayForm ? (
           <button
             onClick={() => setShowRepayForm(true)}

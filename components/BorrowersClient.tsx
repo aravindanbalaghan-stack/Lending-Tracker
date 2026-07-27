@@ -200,6 +200,7 @@ export default function BorrowersClient() {
             <div key={date}>
               <h2 className="text-sm font-medium text-ink-soft mb-2">
                 {new Date(date).toLocaleDateString(locale, {
+                      timeZone: "Asia/Kolkata",
                   weekday: "short",
                   day: "numeric",
                   month: "short",
