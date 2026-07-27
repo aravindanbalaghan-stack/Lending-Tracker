@@ -7,6 +7,20 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Deleted-records tidy-ups (latest)
+
+- **The Deleted records section in Settings is now collapsed by default** —
+  it shows just a count ("N deleted record(s) — tap to view") and expands to
+  the full list only when you tap it.
+- **Fixed "Unknown" payments on the dashboard.** Repayments belonging to a
+  deleted loan were showing as "Unknown" in the day view and still counting
+  in the daily total. They're now excluded consistently — from the day's
+  repayment list and from the cash totals — matching how the loan is hidden
+  everywhere else. (Restoring the loan brings its repayments back into the
+  dashboard too.)
+
+No database migration is needed for this update.
+
 ## Delete with recycle bin (latest)
 
 Loans can now be deleted, with a safety net:

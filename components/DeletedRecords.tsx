@@ -18,6 +18,7 @@ export default function DeletedRecords() {
   const locale = lang === "ta" ? "ta-IN" : "en-IN";
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmPurgeId, setConfirmPurgeId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const [now, setNow] = useState(() => Date.now());
 
@@ -69,30 +70,46 @@ export default function DeletedRecords() {
 
   return (
     <div className="rounded-lg border border-ledger-line bg-white overflow-hidden">
-      <div className="px-4 py-3 border-b border-ledger-line">
-        <p className="text-xs uppercase tracking-wide text-ink-soft">
-          {t("deleted_title")}
-        </p>
-        <p className="text-xs text-ink-soft mt-0.5">{t("deleted_hint")}</p>
-      </div>
-      <div className="divide-y divide-ledger-line">
-        {items.map(({ loan, daysLeft }) => (
-          <div key={loan.id} className="px-4 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm text-ink font-medium">
-                  {loan.borrower_name}
-                  {loan.borrower_name_ta && (
-                    <span className="text-ink-soft font-normal">
-                      {" "}
-                      · {loan.borrower_name_ta}
-                    </span>
-                  )}
-                </p>
-                <p className="text-xs text-ink-soft">
-                  {formatINR(loan.principal)} {t("detail_given")} ·{" "}
-                  {new Date(loan.given_at).toLocaleDateString(locale, {
-                    timeZone: "Asia/Kolkata",
+      <button
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-paper transition"
+      >
+        <span>
+          <span className="text-xs uppercase tracking-wide text-ink-soft block">
+            {t("deleted_title")}
+          </span>
+          <span className="text-sm text-ink">
+            {t("deleted_count").replace("{n}", String(items.length))}
+          </span>
+        </span>
+        <span className="text-ink-soft text-lg leading-none">
+          {expanded ? "▴" : "▾"}
+        </span>
+      </button>
+
+      {expanded && (
+        <>
+          <div className="px-4 py-2 border-t border-ledger-line">
+            <p className="text-xs text-ink-soft">{t("deleted_hint")}</p>
+          </div>
+          <div className="divide-y divide-ledger-line border-t border-ledger-line">
+            {items.map(({ loan, daysLeft }) => (
+              <div key={loan.id} className="px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-ink font-medium">
+                      {loan.borrower_name}
+                      {loan.borrower_name_ta && (
+                        <span className="text-ink-soft font-normal">
+                          {" "}
+                          · {loan.borrower_name_ta}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-ink-soft">
+                      {formatINR(loan.principal)} {t("detail_given")} ·{" "}
+                      {new Date(loan.given_at).toLocaleDateString(locale, {
+                        timeZone: "Asia/Kolkata",
                     day: "numeric",
                     month: "short",
                     year: "numeric",
@@ -139,7 +156,9 @@ export default function DeletedRecords() {
             </div>
           </div>
         ))}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

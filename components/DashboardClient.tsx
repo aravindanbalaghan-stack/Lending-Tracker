@@ -20,7 +20,8 @@ type RepaymentRow = {
 
 export default function DashboardClient() {
   const { lang, t } = useLanguage();
-  const { loans, repayments, dailyEntries, settings, loading } = useLocalData();
+  const { loans, repayments, dailyEntries, settings, loading } =
+    useLocalData();
   const [selected, setSelected] = useState<string>(() => dateKey(new Date()));
 
   const locale = lang === "ta" ? "ta-IN" : "en-IN";
@@ -28,13 +29,19 @@ export default function DashboardClient() {
   const rows: RepaymentRow[] = useMemo(() => {
     const nameByLoanId = new Map(loans.map((l) => [l.id, l.borrower_name]));
     const nameTaByLoanId = new Map(loans.map((l) => [l.id, l.borrower_name_ta]));
-    return repayments.map((r) => ({
-      id: r.id,
-      amount: Number(r.amount),
-      paid_at: r.paid_at,
-      borrower_name: nameByLoanId.get(r.loan_id) ?? "Unknown",
-      borrower_name_ta: nameTaByLoanId.get(r.loan_id) ?? null,
-    }));
+    // Repayments belonging to deleted loans shouldn't appear on the dashboard
+    // at all (the loan is hidden everywhere else too) — filtering by whether
+    // the loan is in the active set also removes the old "Unknown" rows.
+    const activeLoanIds = new Set(loans.map((l) => l.id));
+    return repayments
+      .filter((r) => activeLoanIds.has(r.loan_id))
+      .map((r) => ({
+        id: r.id,
+        amount: Number(r.amount),
+        paid_at: r.paid_at,
+        borrower_name: nameByLoanId.get(r.loan_id) ?? "",
+        borrower_name_ta: nameTaByLoanId.get(r.loan_id) ?? null,
+      }));
   }, [loans, repayments]);
 
   const markedDates = useMemo(() => {
@@ -66,18 +73,26 @@ export default function DashboardClient() {
     [dailyEntries, selected]
   );
 
+  // Only repayments whose loan is still active feed the daily cash summary,
+  // so a deleted loan's money is removed from the totals consistently (rather
+  // than counting in vasool but not nadapu varavu).
+  const activeRepayments = useMemo(() => {
+    const activeLoanIds = new Set(loans.map((l) => l.id));
+    return repayments.filter((r) => activeLoanIds.has(r.loan_id));
+  }, [loans, repayments]);
+
   const summary = useMemo(
     () =>
       computeDaySummary(
         selected,
         loans,
-        repayments,
+        activeRepayments,
         settings,
         settings.mamai_rate,
         entryForSelected?.opening_balance ?? 0,
         entryForSelected?.expenses ?? 0
       ),
-    [selected, loans, repayments, settings, entryForSelected]
+    [selected, loans, activeRepayments, settings, entryForSelected]
   );
 
   if (loading) return null;
