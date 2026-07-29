@@ -24,6 +24,7 @@ export default function NewLoanForm() {
   const [principal, setPrincipal] = useState("");
   const [rate, setRate] = useState("25");
   const [installments, setInstallments] = useState("10");
+  const [displayOrder, setDisplayOrder] = useState("");
   const [givenAt, setGivenAt] = useState(() =>
     new Date().toISOString().slice(0, 10)
   );
@@ -115,6 +116,7 @@ export default function NewLoanForm() {
       interest_rate: rateNum,
       payback_amount: payback,
       installments_count: installmentsNum,
+      display_order: displayOrder.trim() ? parseInt(displayOrder) || 0 : 0,
       collection_schedule: schedule,
       given_at: new Date(givenAt).toISOString(),
       notes: notes.trim() || null,
@@ -225,6 +227,24 @@ export default function NewLoanForm() {
               className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-ink-soft mb-1">
+            {t("newLoan_displayOrder")}
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={displayOrder}
+            onChange={(e) => setDisplayOrder(e.target.value)}
+            placeholder={t("newLoan_displayOrderPlaceholder")}
+            className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm tabular focus:outline-none focus:ring-2 focus:ring-forest"
+          />
+          <p className="text-[10px] text-ink-soft mt-1">
+            {t("newLoan_displayOrderHint")}
+          </p>
         </div>
 
         <div>

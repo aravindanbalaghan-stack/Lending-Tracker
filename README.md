@@ -7,6 +7,28 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Reorder borrowers (latest)
+
+You can now control the order borrowers appear in within each date section on
+the Borrowers list:
+
+- **Drag to reorder** — grab the handle (⠿) on any borrower row and drag it up
+  or down. Works with a mouse on the web and with your finger on mobile. The
+  new order is saved and syncs across devices.
+- **Display order field on New Loan** — an optional number field. Lower
+  numbers show first within that loan's date. Leave it blank to add at the
+  end (you can still drag it later).
+- **Import support** — spreadsheets can include a "Display Order" column,
+  auto-detected during import.
+
+Ordering is within each date (the list is grouped by date), and falls back to
+alphabetical for borrowers that share the same number.
+
+### Database change required
+Run `supabase/migrations/008_display_order.sql` in Supabase's SQL Editor. It
+adds a `display_order` column to loans (default 0) and touches nothing
+existing.
+
 ## Deleted-records tidy-ups (latest)
 
 - **The Deleted records section in Settings is now collapsed by default** —

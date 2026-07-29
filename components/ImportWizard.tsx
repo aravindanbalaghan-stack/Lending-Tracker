@@ -36,6 +36,7 @@ function guessLoanMapping(headers: string[]): FieldMapping {
     principal: ["amount", "principal", "amountgiven", "loanamount", "given"],
     interest_rate: ["interest", "interestrate", "rate"],
     installments_count: ["installments", "installment", "emi", "noofinstallments"],
+    display_order: ["displayorder", "order", "sortorder", "sequence", "position"],
     collection_schedule: ["schedule", "frequency", "collectionday", "day"],
     given_at: ["date", "dategiven", "loandate", "givenon"],
     notes: ["notes", "note", "remarks", "comment", "purpose"],
@@ -155,6 +156,7 @@ export default function ImportWizard() {
         interest_rate: loan.interest_rate,
         payback_amount: paybackAmount(loan.principal, loan.interest_rate),
         installments_count: loan.installments_count,
+        display_order: loan.display_order,
         collection_schedule: loan.collection_schedule,
         given_at: loan.given_at,
         notes: loan.notes,
@@ -205,11 +207,11 @@ export default function ImportWizard() {
   function downloadSampleCsv() {
     const header =
       kind === "loans"
-        ? "Name,Name (Tamil),Amount,Interest Rate,Installments,Schedule,Date Given,Notes"
+        ? "Name,Name (Tamil),Amount,Interest Rate,Installments,Display Order,Schedule,Date Given,Notes"
         : "Name,Amount,Mode,Date Paid";
     const sample =
       kind === "loans"
-        ? "Ramesh Kumar,,10000,25,10,Daily,2026-07-01,"
+        ? "Ramesh Kumar,,10000,25,10,1,Daily,2026-07-01,"
         : "Ramesh Kumar,500,Cash,2026-07-15";
     const csv = `${header}\n${sample}\n`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

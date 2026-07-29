@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { dateKey, formatINR } from "@/lib/calculations";
+import { dateKey } from "@/lib/calculations";
 import { WEEKDAYS, scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { useLocalData } from "@/lib/offline/useLocalData";
 import { findDelayedLoans, delayedLoanIdSet } from "@/lib/delayed";
+import { reorderLoansOffline } from "@/lib/offline/actions";
+import DraggableBorrowerList from "@/components/DraggableBorrowerList";
 
 type LoanEntry = {
   loanId: string;
@@ -19,6 +21,7 @@ type LoanEntry = {
   givenAt: string;
   schedule: string;
   group: ScheduleGroup;
+  displayOrder: number;
 };
 
 const TABS: { key: ScheduleGroup; labelKey: TranslationKey }[] = [
@@ -65,6 +68,7 @@ export default function BorrowersClient() {
         givenAt: l.given_at,
         schedule: l.collection_schedule,
         group: scheduleGroup(l.collection_schedule),
+        displayOrder: l.display_order ?? 0,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [loans, repayments, settings]);
@@ -109,10 +113,25 @@ export default function BorrowersClient() {
       map.set(e.dateKey, list);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => a.name.localeCompare(b.name));
+      // Within a date: manual display order first (lower = higher up), then
+      // name as a stable tiebreaker for items sharing an order (e.g. all 0).
+      list.sort(
+        (a, b) =>
+          a.displayOrder - b.displayOrder || a.name.localeCompare(b.name)
+      );
     }
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [filtered]);
+
+  // When a date section is reordered, write each loan's new position as its
+  // display_order (0,1,2… top to bottom). Only that section's loans change.
+  async function handleReorder(orderedIds: string[]) {
+    const orders = orderedIds.map((id, index) => ({
+      id,
+      display_order: index,
+    }));
+    await reorderLoansOffline(orders);
+  }
 
   if (loading) return null;
 
@@ -207,36 +226,17 @@ export default function BorrowersClient() {
                   year: "numeric",
                 })}
               </h2>
-              <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
-                {dayEntries.map((e) => (
-                  <Link
-                    key={e.loanId}
-                    href={`/borrowers/${encodeURIComponent(e.name)}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-paper transition"
-                  >
-                    <div>
-                      <p className="text-sm text-ink font-medium">
-                        {e.name}
-                        {e.nameTa && (
-                          <span className="text-ink-soft font-normal"> · {e.nameTa}</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-ink-soft">
-                        {t("borrowers_given")} {formatINR(e.principal)}
-                      </p>
-                    </div>
-                    <p
-                      className={`tabular text-sm ${
-                        e.outstanding > 0 ? "text-rust" : "text-forest"
-                      }`}
-                    >
-                      {e.outstanding > 0
-                        ? `${formatINR(e.outstanding)} ${t("borrowers_due")}`
-                        : t("borrowers_settled")}
-                    </p>
-                  </Link>
-                ))}
-              </div>
+              <DraggableBorrowerList
+                entries={dayEntries.map((e) => ({
+                  loanId: e.loanId,
+                  name: e.name,
+                  nameTa: e.nameTa,
+                  principal: e.principal,
+                  outstanding: e.outstanding,
+                }))}
+                t={t}
+                onReorder={(orderedIds) => handleReorder(orderedIds)}
+              />
             </div>
           ))}
         </div>

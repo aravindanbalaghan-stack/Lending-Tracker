@@ -28,16 +28,20 @@ export async function getCurrentUserId(): Promise<string | null> {
 }
 
 export async function createLoanOffline(
-  input: Omit<LoanRecord, "id" | "lender_id" | "deleted_at">
+  input: Omit<LoanRecord, "id" | "lender_id" | "deleted_at" | "display_order"> & {
+    display_order?: number;
+  }
 ): Promise<{ ok: boolean; error?: string; id?: string }> {
   const userId = await getCurrentUserId();
   if (!userId) return { ok: false, error: "You must be signed in." };
 
+  const { display_order, ...rest } = input;
   const loan: LoanRecord = {
     id: crypto.randomUUID(),
     lender_id: userId,
     deleted_at: null,
-    ...input,
+    display_order: display_order ?? 0,
+    ...rest,
   };
 
   // Write locally first — this is what makes the UI update instantly and
@@ -171,7 +175,12 @@ export async function updateLoanOffline(
   loanId: string,
   changes: Omit<
     LoanRecord,
-    "id" | "lender_id" | "borrower_name" | "borrower_name_ta" | "deleted_at"
+    | "id"
+    | "lender_id"
+    | "borrower_name"
+    | "borrower_name_ta"
+    | "deleted_at"
+    | "display_order"
   >
 ): Promise<{ ok: boolean; error?: string }> {
   const userId = await getCurrentUserId();
@@ -321,6 +330,49 @@ async function hardDeleteLoanLocalAndRemote(loanId: string): Promise<void> {
   }
 }
 
+// Persist a new display order for a set of loans (one date section's worth,
+// after a drag-and-drop). Each entry pairs a loan id with its new order
+// number. Updates local cache immediately, then the server (queuing if
+// offline), so the arrangement survives reloads and syncs across devices.
+export async function reorderLoansOffline(
+  orders: { id: string; display_order: number }[]
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+
+  const all = await getAllLoans();
+  const orderById = new Map(orders.map((o) => [o.id, o.display_order]));
+  const updated = all
+    .filter((l) => orderById.has(l.id))
+    .map((l) => ({ ...l, display_order: orderById.get(l.id)! }));
+  await putLoans(updated);
+
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    const supabase = createClient();
+    for (const o of orders) {
+      const { error } = await supabase
+        .from("loans")
+        .update({ display_order: o.display_order })
+        .eq("id", o.id);
+      if (error) {
+        await enqueueOutbox("update_loan", {
+          id: o.id,
+          changes: { display_order: o.display_order },
+        });
+      }
+    }
+  } else {
+    for (const o of orders) {
+      await enqueueOutbox("update_loan", {
+        id: o.id,
+        changes: { display_order: o.display_order },
+      });
+    }
+  }
+
+  return { ok: true };
+}
+
 export async function updateRepaymentOffline(
   repaymentId: string,
   changes: { amount: number; payment_mode: string; paid_at: string }
@@ -400,17 +452,24 @@ export async function renameBorrowerOffline(
 }
 
 export async function createLoansBulkOffline(
-  inputs: Omit<LoanRecord, "id" | "lender_id" | "deleted_at">[]
+  inputs: (Omit<
+    LoanRecord,
+    "id" | "lender_id" | "deleted_at" | "display_order"
+  > & { display_order?: number })[]
 ): Promise<{ ok: boolean; count: number; error?: string }> {
   const userId = await getCurrentUserId();
   if (!userId) return { ok: false, count: 0, error: "You must be signed in." };
 
-  const loans: LoanRecord[] = inputs.map((i) => ({
-    id: crypto.randomUUID(),
-    lender_id: userId,
-    deleted_at: null,
-    ...i,
-  }));
+  const loans: LoanRecord[] = inputs.map((i) => {
+    const { display_order, ...rest } = i;
+    return {
+      id: crypto.randomUUID(),
+      lender_id: userId,
+      deleted_at: null,
+      display_order: display_order ?? 0,
+      ...rest,
+    };
+  });
 
   await putLoans(loans);
 

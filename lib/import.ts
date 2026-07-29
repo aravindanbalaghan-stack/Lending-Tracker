@@ -43,6 +43,7 @@ export const LOAN_FIELDS = [
   { key: "principal", labelKey: "import_field_amount", required: true },
   { key: "interest_rate", labelKey: "import_field_rate", required: false },
   { key: "installments_count", labelKey: "import_field_installments", required: false },
+  { key: "display_order", labelKey: "import_field_displayOrder", required: false },
   { key: "collection_schedule", labelKey: "import_field_schedule", required: false },
   { key: "given_at", labelKey: "import_field_date", required: false },
   { key: "notes", labelKey: "import_field_notes", required: false },
@@ -67,6 +68,7 @@ export type MappedLoan = {
   principal: number;
   interest_rate: number;
   installments_count: number;
+  display_order: number;
   collection_schedule: string;
   given_at: string; // ISO date
   notes: string | null;
@@ -163,6 +165,11 @@ export function mapRows(
 
     const notes = get(mapping.notes) || null;
 
+    const displayOrderRaw = get(mapping.display_order);
+    const displayOrder = displayOrderRaw
+      ? parseInt(displayOrderRaw, 10) || 0
+      : 0;
+
     const nameTaRaw = get(mapping.borrower_name_ta);
     const nameTa = nameTaRaw || transliterateToTamil(name);
 
@@ -172,6 +179,7 @@ export function mapRows(
       principal: amount,
       interest_rate: isNaN(rate) ? 25 : rate,
       installments_count: installments,
+      display_order: displayOrder,
       collection_schedule: schedule,
       given_at: parsedDate.toISOString(),
       notes,

@@ -11,6 +11,7 @@ export type LoanRecord = {
   borrower_name: string;
   borrower_name_ta: string | null;
   deleted_at: string | null;
+  display_order: number;
   principal: number;
   interest_rate: number;
   payback_amount: number;
