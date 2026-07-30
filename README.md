@@ -7,6 +7,23 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Cleaner mobile UI (latest)
+
+Reclaimed a lot of vertical space on phones (all desktop layouts unchanged):
+
+- **Page titles and subtitles hidden on mobile** — the bottom tab bar already
+  says which screen you're on, so the big "Dashboard" / "Borrowers" / etc.
+  headers were redundant. They still show on desktop.
+- **Thinner top bar on mobile** — smaller logo, app name, and padding.
+- **Tighter spacing** — reduced the gaps between sections and the page
+  padding on mobile so more fits on screen.
+- **Dashboard date line simplified on mobile** — the date picker already shows
+  the selected date, so the long "Wednesday, 30 July 2026" line is replaced by
+  just the day's total ("Total: ₹…"). Desktop keeps the full date.
+- Language toggle stays in Settings only (not the top bar).
+
+No database migration is needed for this update.
+
 ## Drag to reorder in Quick Payment too (latest)
 
 The Repay (Quick Payment) tab now supports the same drag-to-reorder as the

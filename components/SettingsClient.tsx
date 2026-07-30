@@ -43,8 +43,10 @@ export default function SettingsClient() {
 
   return (
     <div className="max-w-xl">
-      <h1 className="font-serif text-2xl text-ink mb-1">{t("settings_title")}</h1>
+      <div className="hidden md:block">
+        <h1 className="font-serif text-2xl text-ink mb-1">{t("settings_title")}</h1>
       <p className="text-sm text-ink-soft mb-6">{t("settings_subtitle")}</p>
+      </div>
 
       {/* Account */}
       <div className="rounded-lg border border-ledger-line bg-white p-4 mb-4">

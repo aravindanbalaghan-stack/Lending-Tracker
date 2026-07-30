@@ -36,12 +36,14 @@ export default function NavBarClient({ hasUser }: { hasUser: boolean }) {
   return (
     <>
       <header className="border-b border-ledger-line bg-white">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-3xl mx-auto px-4 py-1.5 md:py-3 flex items-center justify-between gap-4">
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-forest text-brass-soft text-sm font-serif">
+            <span className="inline-flex h-6 w-6 md:h-7 md:w-7 items-center justify-center rounded-full bg-forest text-brass-soft text-xs md:text-sm font-serif">
               ₹
             </span>
-            <span className="font-serif text-lg text-ink">{t("appName")}</span>
+            <span className="font-serif text-base md:text-lg text-ink">
+              {t("appName")}
+            </span>
           </Link>
 
           {/* Desktop links — hidden on mobile */}

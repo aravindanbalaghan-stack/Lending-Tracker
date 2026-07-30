@@ -96,8 +96,10 @@ export default function RepayClient() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-ink mb-1">{t("repay_title")}</h1>
-      <p className="text-sm text-ink-soft mb-4">{t("repay_subtitle")}</p>
+      <div className="hidden md:block">
+        <h1 className="font-serif text-2xl text-ink mb-1">{t("repay_title")}</h1>
+        <p className="text-sm text-ink-soft mb-4">{t("repay_subtitle")}</p>
+      </div>
 
       <input
         value={query}
@@ -114,7 +116,7 @@ export default function RepayClient() {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {sections.daily.length > 0 && (
             <ResultGroup
               title={t("borrowers_tabDaily")}

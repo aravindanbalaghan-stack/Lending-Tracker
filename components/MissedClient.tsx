@@ -62,8 +62,10 @@ export default function MissedClient() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-ink mb-1">{t("missed_title")}</h1>
+      <div className="hidden md:block">
+        <h1 className="font-serif text-2xl text-ink mb-1">{t("missed_title")}</h1>
       <p className="text-sm text-ink-soft mb-6">{t("missed_subtitle")}</p>
+      </div>
 
       {loans.length === 0 ? (
         <div className="rounded-lg border border-dashed border-ledger-line p-8 text-center">

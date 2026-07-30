@@ -137,7 +137,7 @@ export default function BorrowersClient() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="hidden md:flex items-center justify-between mb-4">
         <h1 className="font-serif text-2xl text-ink">{t("borrowers_title")}</h1>
         <Link
           href="/borrowers/new"
@@ -214,7 +214,7 @@ export default function BorrowersClient() {
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4 md:space-y-5">
           {dateSections.map(([date, dayEntries]) => (
             <div key={date}>
               <h2 className="text-sm font-medium text-ink-soft mb-2">

@@ -62,8 +62,10 @@ export default function DelayedClient() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-ink mb-1">{t("delayed_title")}</h1>
+      <div className="hidden md:block">
+        <h1 className="font-serif text-2xl text-ink mb-1">{t("delayed_title")}</h1>
       <p className="text-sm text-ink-soft mb-6">{t("delayed_subtitle")}</p>
+      </div>
 
       {justSettled &&
         !delayed.some((d) => d.id === justSettled.id) && (

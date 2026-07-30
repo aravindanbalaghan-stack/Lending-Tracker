@@ -98,26 +98,30 @@ export default function DashboardClient() {
   if (loading) return null;
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-4 md:space-y-6">
+      <div className="hidden md:block">
         <h1 className="font-serif text-2xl text-ink mb-1">
           {t("dashboard_title")}
         </h1>
         <p className="text-sm text-ink-soft">{t("dashboard_subtitle")}</p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6 md:items-start">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:items-start">
         <div className="flex-1 order-2 md:order-1">
           <h2 className="text-sm font-medium text-ink-soft mb-2">
-            {new Date(selected).toLocaleDateString(locale, {
-                      timeZone: "Asia/Kolkata",
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}{" "}
+            <span className="hidden md:inline">
+              {new Date(selected).toLocaleDateString(locale, {
+                timeZone: "Asia/Kolkata",
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}{" "}
+            </span>
             <span className="tabular text-ink">
-              — {formatINR(selectedTotal)}
+              <span className="md:hidden">{t("dashboard_dayTotal")} </span>
+              <span className="hidden md:inline">— </span>
+              {formatINR(selectedTotal)}
             </span>
           </h2>
 
