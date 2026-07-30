@@ -7,6 +7,7 @@ import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
 import { useLocalData } from "@/lib/offline/useLocalData";
+import { reorderLoansOffline } from "@/lib/offline/actions";
 
 type RepayLoan = {
   id: string;
@@ -15,6 +16,7 @@ type RepayLoan = {
   outstanding: number;
   collection_schedule: string;
   given_at: string;
+  displayOrder: number;
 };
 
 export default function RepayClient() {
@@ -40,9 +42,14 @@ export default function RepayClient() {
         outstanding: Number(l.payback_amount) - (paidByLoanId.get(l.id) ?? 0),
         collection_schedule: l.collection_schedule,
         given_at: l.given_at,
+        displayOrder: l.display_order ?? 0,
       }))
       .filter((l) => l.outstanding > 0)
-      .sort((a, b) => a.borrower_name.localeCompare(b.borrower_name));
+      .sort(
+        (a, b) =>
+          a.displayOrder - b.displayOrder ||
+          a.borrower_name.localeCompare(b.borrower_name)
+      );
   }, [allLoans, allRepayments]);
 
   const filtered = useMemo(() => {
@@ -70,6 +77,15 @@ export default function RepayClient() {
 
     return { daily, weeklyByDay, monthly };
   }, [filtered]);
+
+  // Persist a group's new order as sequential display_order values. Shared
+  // with the Borrowers list — a loan's position is one value, so reordering
+  // in either place stays consistent.
+  async function handleReorder(orderedIds: string[]) {
+    await reorderLoansOffline(
+      orderedIds.map((id, index) => ({ id, display_order: index }))
+    );
+  }
 
   const hasResults =
     sections.daily.length > 0 ||
@@ -106,6 +122,7 @@ export default function RepayClient() {
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
               onSaved={() => setOpenLoanId(null)}
+              onReorder={handleReorder}
               t={t}
             />
           )}
@@ -117,6 +134,7 @@ export default function RepayClient() {
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
               onSaved={() => setOpenLoanId(null)}
+              onReorder={handleReorder}
               t={t}
             />
           ))}
@@ -127,6 +145,7 @@ export default function RepayClient() {
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
               onSaved={() => setOpenLoanId(null)}
+              onReorder={handleReorder}
               t={t}
             />
           )}
@@ -142,6 +161,7 @@ function ResultGroup({
   openLoanId,
   setOpenLoanId,
   onSaved,
+  onReorder,
   t,
 }: {
   title: string;
@@ -149,24 +169,94 @@ function ResultGroup({
   openLoanId: string | null;
   setOpenLoanId: (id: string | null) => void;
   onSaved: () => void;
+  onReorder: (orderedIds: string[]) => void;
   t: (key: TranslationKey) => string;
 }) {
+  const [order, setOrder] = useState<string[]>(items.map((i) => i.id));
+  const [dragging, setDragging] = useState<string | null>(null);
+
+  // Resync local order when the underlying set changes (add/remove/settle)
+  // and we're not mid-drag.
+  const incoming = items.map((i) => i.id).join(",");
+  if (!dragging && incoming !== order.join(",") && items.length !== order.length) {
+    setOrder(items.map((i) => i.id));
+  }
+
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const ordered = order
+    .map((id) => byId.get(id))
+    .filter((l): l is RepayLoan => Boolean(l));
+
+  function moveTo(targetId: string) {
+    if (!dragging || dragging === targetId) return;
+    setOrder((prev) => {
+      const from = prev.indexOf(dragging);
+      const to = prev.indexOf(targetId);
+      if (from === -1 || to === -1) return prev;
+      const next = [...prev];
+      next.splice(from, 1);
+      next.splice(to, 0, dragging);
+      return next;
+    });
+  }
+
+  function endDrag() {
+    setDragging(null);
+    onReorder(order);
+  }
+
   return (
     <div>
       <h2 className="text-sm font-medium text-ink-soft mb-2">
         {title} ({items.length})
       </h2>
       <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
-        {items.map((loan) => (
-          <div key={loan.id} className="px-4 py-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-ink font-medium">
+        {ordered.map((loan) => (
+          <div
+            key={loan.id}
+            data-loan-id={loan.id}
+            className={`px-3 py-3 ${
+              dragging === loan.id ? "bg-paper opacity-60" : ""
+            }`}
+            onDragOver={(ev) => ev.preventDefault()}
+            onDragEnter={() => moveTo(loan.id)}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                draggable
+                onDragStart={() => setDragging(loan.id)}
+                onDragEnd={endDrag}
+                className="cursor-grab active:cursor-grabbing text-ink-soft select-none touch-none px-1"
+                aria-label={t("borrowers_dragHandle")}
+                title={t("borrowers_dragHandle")}
+                onPointerDown={(ev) => {
+                  if (ev.pointerType !== "touch") return;
+                  setDragging(loan.id);
+                }}
+                onPointerMove={(ev) => {
+                  if (ev.pointerType !== "touch" || dragging !== loan.id) return;
+                  const el = document.elementFromPoint(ev.clientX, ev.clientY);
+                  const row = el?.closest("[data-loan-id]") as HTMLElement | null;
+                  const targetId = row?.dataset.loanId;
+                  if (targetId) moveTo(targetId);
+                }}
+                onPointerUp={(ev) => {
+                  if (ev.pointerType !== "touch") return;
+                  endDrag();
+                }}
+              >
+                ⠿
+              </span>
+              <p className="text-sm text-ink font-medium flex-1 min-w-0 truncate">
                 {loan.borrower_name}
                 {loan.borrower_name_ta && (
-                  <span className="text-ink-soft font-normal"> · {loan.borrower_name_ta}</span>
+                  <span className="text-ink-soft font-normal">
+                    {" "}
+                    · {loan.borrower_name_ta}
+                  </span>
                 )}
               </p>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <p className="tabular text-sm text-rust">
                   {formatINR(loan.outstanding)}
                 </p>

@@ -7,6 +7,18 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Drag to reorder in Quick Payment too (latest)
+
+The Repay (Quick Payment) tab now supports the same drag-to-reorder as the
+Borrowers list. Grab the handle (⠿) on any row and drag within its group
+(Daily, each weekday, or Monthly) to rearrange. Works on web and mobile.
+
+Reordering uses the same display_order as the Borrowers list, so a borrower's
+position stays consistent between the two screens.
+
+No database migration is needed for this update (it reuses the display_order
+column added earlier).
+
 ## Reorder borrowers (latest)
 
 You can now control the order borrowers appear in within each date section on
