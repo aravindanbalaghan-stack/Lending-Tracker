@@ -10,6 +10,7 @@ import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
 import RenewLoanPrompt from "@/components/RenewLoanPrompt";
 import { useLocalData } from "@/lib/offline/useLocalData";
+import { SkeletonList } from "@/components/Skeletons";
 import type { LoanRecord } from "@/lib/offline/db";
 
 const GROUP_LABEL: Record<ScheduleGroup, TranslationKey> = {
@@ -58,7 +59,7 @@ export default function DelayedClient() {
     if (loan) setJustSettled(loan);
   }
 
-  if (loading) return null;
+  if (loading) return <SkeletonList rows={6} />;
 
   return (
     <div>

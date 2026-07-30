@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { OfflineProvider } from "@/components/OfflineProvider";
 import { LocalDataProvider } from "@/components/LocalDataProvider";
 import OfflineBanner from "@/components/OfflineBanner";
@@ -48,18 +49,26 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#1b4332" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* Set the theme before first paint to avoid a light-mode flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('kanakku-theme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col pb-16 md:pb-0">
         <LanguageProvider>
-          <OfflineProvider>
-            <LocalDataProvider>
-              <ServiceWorkerRegister />
-              <OfflineBanner />
-              <WeeklyBackup />
-              {children}
-              <NewLoanFab />
-            </LocalDataProvider>
-          </OfflineProvider>
+          <ThemeProvider>
+            <OfflineProvider>
+              <LocalDataProvider>
+                <ServiceWorkerRegister />
+                <OfflineBanner />
+                <WeeklyBackup />
+                {children}
+                <NewLoanFab />
+              </LocalDataProvider>
+            </OfflineProvider>
+          </ThemeProvider>
         </LanguageProvider>
       </body>
     </html>

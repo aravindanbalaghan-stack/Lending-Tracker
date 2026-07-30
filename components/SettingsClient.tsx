@@ -6,10 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { ensureLocalDataMatchesUser } from "@/lib/offline/db";
 import { getLastBackup } from "@/lib/lastBackup";
 import DeletedRecords from "@/components/DeletedRecords";
+import { useTheme } from "@/components/ThemeProvider";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function SettingsClient() {
   const { lang, setLang, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const [email, setEmail] = useState<string | null>(null);
   const [lastBackup, setLastBackupState] = useState<number | null>(null);
 
@@ -100,6 +102,31 @@ export default function SettingsClient() {
             }`}
           >
             தமிழ்
+          </button>
+        </div>
+      </div>
+
+      {/* Appearance */}
+      <div className="rounded-lg border border-ledger-line bg-white p-4 mb-4">
+        <p className="text-xs uppercase tracking-wide text-ink-soft mb-2">
+          {t("settings_appearance")}
+        </p>
+        <div className="flex rounded-md border border-ledger-line overflow-hidden text-sm w-fit">
+          <button
+            onClick={() => setTheme("light")}
+            className={`px-4 py-1.5 ${
+              theme === "light" ? "bg-forest text-white" : "text-ink-soft"
+            }`}
+          >
+            {t("settings_light")}
+          </button>
+          <button
+            onClick={() => setTheme("dark")}
+            className={`px-4 py-1.5 ${
+              theme === "dark" ? "bg-forest text-white" : "text-ink-soft"
+            }`}
+          >
+            {t("settings_dark")}
           </button>
         </div>
       </div>

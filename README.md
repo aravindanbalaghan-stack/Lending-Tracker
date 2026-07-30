@@ -7,6 +7,35 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Richer mobile experience (latest)
+
+- **Daily summary card** on the dashboard — two headline figures at the top:
+  what you've collected today, and the total still pending across all loans.
+  The numbers a lender checks each morning.
+- **Swipe to delete** — on mobile, swipe a borrower row left to reveal a
+  Delete action (soft-delete, recoverable from the bin). The drag handle
+  still handles reordering; the row body handles swipe.
+- **Loading skeletons** — screens now show placeholder shapes while data
+  loads instead of flashing blank, so the app feels faster.
+- **Dark mode** — a Light/Dark toggle in Settings → Appearance. Follows your
+  device preference the first time, then remembers your choice. Set before
+  first paint, so no light-mode flash on open.
+
+No database migration is needed for this update.
+
+## Fix: drag order no longer bleeds between screens (latest)
+
+Reordering in the Borrowers list and the Repay tab were sharing one order
+value, but the two screens show different sets of loans (Repay hides paid
+ones), so dragging in one could rearrange the other. Each screen now has its
+own independent order — dragging in Repay never disturbs Borrowers and vice
+versa.
+
+### Database change required
+Run `supabase/migrations/009_repay_display_order.sql` in Supabase's SQL
+Editor. Adds a `repay_display_order` column (default 0); touches nothing
+existing.
+
 ## Cleaner mobile UI (latest)
 
 Reclaimed a lot of vertical space on phones (all desktop layouts unchanged):

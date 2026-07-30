@@ -6,6 +6,7 @@ import { dateKey, formatINR } from "@/lib/calculations";
 import { computeDaySummary } from "@/lib/dailyDetails";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useLocalData } from "@/lib/offline/useLocalData";
+import { SkeletonDashboard } from "@/components/Skeletons";
 import MiniCalendar from "@/components/MiniCalendar";
 import MobileDatePicker from "@/components/MobileDatePicker";
 import DailyDetailsCard from "@/components/DailyDetailsCard";
@@ -73,6 +74,27 @@ export default function DashboardClient() {
     [dailyEntries, selected]
   );
 
+  // Headline figures for the summary card: money collected today, and the
+  // total still owed across all active loans. Always "today" (IST), not the
+  // selected date, so it's a stable daily snapshot.
+  const todayKey = dateKey(new Date());
+  const collectedToday = useMemo(
+    () =>
+      rows
+        .filter((r) => dateKey(r.paid_at) === todayKey)
+        .reduce((s, r) => s + r.amount, 0),
+    [rows, todayKey]
+  );
+  const totalOutstanding = useMemo(() => {
+    const paid = new Map<string, number>();
+    for (const r of repayments)
+      paid.set(r.loan_id, (paid.get(r.loan_id) ?? 0) + Number(r.amount));
+    return loans.reduce(
+      (s, l) => s + Math.max(0, Number(l.payback_amount) - (paid.get(l.id) ?? 0)),
+      0
+    );
+  }, [loans, repayments]);
+
   // Only repayments whose loan is still active feed the daily cash summary,
   // so a deleted loan's money is removed from the totals consistently (rather
   // than counting in vasool but not nadapu varavu).
@@ -95,7 +117,10 @@ export default function DashboardClient() {
     [selected, loans, activeRepayments, settings, entryForSelected]
   );
 
-  if (loading) return null;
+  if (loading)
+    return (
+      <SkeletonDashboard />
+    );
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -104,6 +129,26 @@ export default function DashboardClient() {
           {t("dashboard_title")}
         </h1>
         <p className="text-sm text-ink-soft">{t("dashboard_subtitle")}</p>
+      </div>
+
+      {/* Daily snapshot — the two numbers a lender checks each morning. */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-forest text-white p-4">
+          <p className="text-[11px] uppercase tracking-wide text-white/70">
+            {t("summary_collectedToday")}
+          </p>
+          <p className="tabular text-2xl font-semibold mt-1">
+            {formatINR(collectedToday)}
+          </p>
+        </div>
+        <div className="rounded-xl bg-white border border-ledger-line p-4">
+          <p className="text-[11px] uppercase tracking-wide text-ink-soft">
+            {t("summary_totalPending")}
+          </p>
+          <p className="tabular text-2xl font-semibold text-rust mt-1">
+            {formatINR(totalOutstanding)}
+          </p>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:items-start">

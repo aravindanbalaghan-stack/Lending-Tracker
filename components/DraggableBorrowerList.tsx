@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { formatINR } from "@/lib/calculations";
 import type { TranslationKey } from "@/lib/i18n";
+import SwipeableRow from "@/components/SwipeableRow";
 
 export type DraggableEntry = {
   loanId: string;
@@ -21,10 +22,12 @@ export default function DraggableBorrowerList({
   entries,
   t,
   onReorder,
+  onDelete,
 }: {
   entries: DraggableEntry[];
   t: (key: TranslationKey) => string;
   onReorder: (orderedIds: string[]) => void;
+  onDelete: (loanId: string) => void;
 }) {
   const [order, setOrder] = useState<string[]>(entries.map((e) => e.loanId));
   const [dragging, setDragging] = useState<string | null>(null);
@@ -82,7 +85,7 @@ export default function DraggableBorrowerList({
           onDragEnter={() => handleDragEnterRow(e.loanId)}
           onDragEnd={handleDrop}
           onDragOver={(ev) => ev.preventDefault()}
-          className={`flex items-center gap-2 px-3 py-3 transition ${
+          className={`flex items-center gap-2 px-3 transition ${
             dragging === e.loanId ? "bg-paper opacity-60" : "hover:bg-paper"
           }`}
         >
@@ -112,32 +115,44 @@ export default function DraggableBorrowerList({
             ⠿
           </span>
 
-          <Link
-            href={`/borrowers/${encodeURIComponent(e.name)}`}
-            data-loan-id={e.loanId}
-            className="flex-1 flex items-center justify-between min-w-0"
-          >
-            <span className="min-w-0">
-              <span className="block text-sm text-ink font-medium truncate">
-                {e.name}
-                {e.nameTa && (
-                  <span className="text-ink-soft font-normal"> · {e.nameTa}</span>
-                )}
-              </span>
-              <span className="block text-xs text-ink-soft">
-                {t("borrowers_given")} {formatINR(e.principal)}
-              </span>
-            </span>
-            <span
-              className={`tabular text-sm shrink-0 ml-2 ${
-                e.outstanding > 0 ? "text-rust" : "text-forest"
-              }`}
+          <div className="flex-1 min-w-0">
+            <SwipeableRow
+              actions={[
+                {
+                  label: t("detail_deleteLoan"),
+                  color: "bg-rust",
+                  onClick: () => onDelete(e.loanId),
+                },
+              ]}
             >
-              {e.outstanding > 0
-                ? `${formatINR(e.outstanding)} ${t("borrowers_due")}`
-                : t("borrowers_settled")}
-            </span>
-          </Link>
+              <Link
+                href={`/borrowers/${encodeURIComponent(e.name)}`}
+                data-loan-id={e.loanId}
+                className="flex items-center justify-between min-w-0 py-3 pr-3"
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm text-ink font-medium truncate">
+                    {e.name}
+                    {e.nameTa && (
+                      <span className="text-ink-soft font-normal"> · {e.nameTa}</span>
+                    )}
+                  </span>
+                  <span className="block text-xs text-ink-soft">
+                    {t("borrowers_given")} {formatINR(e.principal)}
+                  </span>
+                </span>
+                <span
+                  className={`tabular text-sm shrink-0 ml-2 ${
+                    e.outstanding > 0 ? "text-rust" : "text-forest"
+                  }`}
+                >
+                  {e.outstanding > 0
+                    ? `${formatINR(e.outstanding)} ${t("borrowers_due")}`
+                    : t("borrowers_settled")}
+                </span>
+              </Link>
+            </SwipeableRow>
+          </div>
         </div>
       ))}
     </div>

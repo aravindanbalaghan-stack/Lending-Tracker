@@ -8,6 +8,7 @@ create table if not exists loans (
   borrower_name_ta text,
   deleted_at timestamptz,
   display_order integer not null default 0,
+  repay_display_order integer not null default 0,
   principal numeric(12,2) not null check (principal > 0),
   interest_rate numeric(5,2) not null default 25 check (interest_rate >= 0),
   payback_amount numeric(12,2) not null check (payback_amount >= 0),

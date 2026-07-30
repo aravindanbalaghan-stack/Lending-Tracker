@@ -7,6 +7,7 @@ import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
 import { useLocalData } from "@/lib/offline/useLocalData";
+import { SkeletonList } from "@/components/Skeletons";
 import { reorderLoansOffline } from "@/lib/offline/actions";
 
 type RepayLoan = {
@@ -42,7 +43,7 @@ export default function RepayClient() {
         outstanding: Number(l.payback_amount) - (paidByLoanId.get(l.id) ?? 0),
         collection_schedule: l.collection_schedule,
         given_at: l.given_at,
-        displayOrder: l.display_order ?? 0,
+        displayOrder: l.repay_display_order ?? 0,
       }))
       .filter((l) => l.outstanding > 0)
       .sort(
@@ -83,7 +84,8 @@ export default function RepayClient() {
   // in either place stays consistent.
   async function handleReorder(orderedIds: string[]) {
     await reorderLoansOffline(
-      orderedIds.map((id, index) => ({ id, display_order: index }))
+      orderedIds.map((id, index) => ({ id, display_order: index })),
+      "repay_display_order"
     );
   }
 
@@ -92,7 +94,7 @@ export default function RepayClient() {
     sections.weeklyByDay.length > 0 ||
     sections.monthly.length > 0;
 
-  if (loading) return null;
+  if (loading) return <SkeletonList rows={6} />;
 
   return (
     <div>

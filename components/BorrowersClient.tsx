@@ -7,8 +7,9 @@ import { WEEKDAYS, scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import { useLocalData } from "@/lib/offline/useLocalData";
+import { SkeletonList } from "@/components/Skeletons";
 import { findDelayedLoans, delayedLoanIdSet } from "@/lib/delayed";
-import { reorderLoansOffline } from "@/lib/offline/actions";
+import { reorderLoansOffline, softDeleteLoanOffline } from "@/lib/offline/actions";
 import DraggableBorrowerList from "@/components/DraggableBorrowerList";
 
 type LoanEntry = {
@@ -133,7 +134,11 @@ export default function BorrowersClient() {
     await reorderLoansOffline(orders);
   }
 
-  if (loading) return null;
+  async function handleDelete(loanId: string) {
+    await softDeleteLoanOffline(loanId);
+  }
+
+  if (loading) return <SkeletonList rows={6} />;
 
   return (
     <div>
@@ -236,6 +241,7 @@ export default function BorrowersClient() {
                 }))}
                 t={t}
                 onReorder={(orderedIds) => handleReorder(orderedIds)}
+                onDelete={handleDelete}
               />
             </div>
           ))}

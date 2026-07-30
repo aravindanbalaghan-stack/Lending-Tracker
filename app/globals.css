@@ -13,6 +13,27 @@
   --rust-soft: #f5e4e0;
 }
 
+/* Dark theme: applied when <html data-theme="dark">. Uses the same variable
+   names so every component follows automatically. Cards use a slightly
+   lighter surface than the page background for depth. */
+html[data-theme="dark"] {
+  --paper: #12130f;
+  --ink: #ece9df;
+  --ink-soft: #a8a89a;
+  --ledger-line: #33342c;
+  --brass: #c9a45f;
+  --brass-soft: #2a2519;
+  --forest: #2e6a4f;
+  --forest-soft: #1a241f;
+  --rust: #c76b5f;
+  --rust-soft: #2a1b19;
+}
+
+/* White surfaces in the light theme become a raised dark surface. */
+html[data-theme="dark"] .bg-white {
+  background-color: #1b1c17 !important;
+}
+
 @theme inline {
   --color-paper: var(--paper);
   --color-ink: var(--ink);
