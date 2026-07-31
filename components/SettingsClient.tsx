@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ensureLocalDataMatchesUser } from "@/lib/offline/db";
 import { getLastBackup } from "@/lib/lastBackup";
 import DeletedRecords from "@/components/DeletedRecords";
+import PinSettings from "@/components/PinSettings";
 import { useTheme } from "@/components/ThemeProvider";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -130,6 +131,8 @@ export default function SettingsClient() {
           </button>
         </div>
       </div>
+
+      <PinSettings />
 
       <div className="mb-4">
         <DeletedRecords />

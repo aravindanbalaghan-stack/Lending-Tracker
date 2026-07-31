@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
 import NavBarClient from "@/components/NavBarClient";
 
-export default async function NavBar() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return <NavBarClient hasUser={Boolean(user)} />;
+// Pages that render this NavBar are all behind the auth middleware, so the
+// user is always signed in here. We therefore skip the per-navigation
+// server-side auth round-trip that used to make every tab switch wait ~2s,
+// and render the bar immediately.
+export default function NavBar() {
+  return <NavBarClient hasUser />;
 }

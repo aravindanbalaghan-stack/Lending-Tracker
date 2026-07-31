@@ -7,6 +7,7 @@ import { LocalDataProvider } from "@/components/LocalDataProvider";
 import OfflineBanner from "@/components/OfflineBanner";
 import WeeklyBackup from "@/components/WeeklyBackup";
 import NewLoanFab from "@/components/NewLoanFab";
+import PinLock from "@/components/PinLock";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
@@ -62,10 +63,12 @@ export default function RootLayout({
             <OfflineProvider>
               <LocalDataProvider>
                 <ServiceWorkerRegister />
-                <OfflineBanner />
-                <WeeklyBackup />
-                {children}
-                <NewLoanFab />
+                <PinLock>
+                  <OfflineBanner />
+                  <WeeklyBackup />
+                  {children}
+                  <NewLoanFab />
+                </PinLock>
               </LocalDataProvider>
             </OfflineProvider>
           </ThemeProvider>

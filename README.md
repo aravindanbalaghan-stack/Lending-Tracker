@@ -7,6 +7,25 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Faster tabs + PIN lock (latest)
+
+**Much faster tab switching.** Every page used to run a server-side auth
+check (a network round-trip) on each navigation, causing a ~2s delay. Since
+the auth middleware already guarantees you're signed in on these pages, that
+per-tab check was removed — pages now render instantly from a static shell
+and load data from the shared local cache. Added loading skeletons on
+navigation so switching feels immediate.
+
+**Optional app PIN lock.** In Settings → App lock, you can set a 4-digit PIN
+(numbers only). Once on, opening the app shows a keypad that must be unlocked
+with the PIN before the app is accessible. You can change or turn it off from
+the same place. The PIN is stored hashed on the device, and is asked once per
+app open (not on every internal screen).
+
+Notes: the PIN is a device-level convenience lock on top of the normal
+account login — it's set per device, so a user enables it on each phone they
+use. No database migration is needed for this update.
+
 ## Richer mobile experience (latest)
 
 - **Daily summary card** on the dashboard — two headline figures at the top:
