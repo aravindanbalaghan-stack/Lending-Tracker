@@ -7,6 +7,33 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Offline borrower detail page (latest)
+
+Fixes two issues that shared one root cause — the borrower detail page
+couldn't load offline:
+
+- **Payment history missing offline** — tapping a borrower didn't show when
+  and how much they'd paid, because the detail page never loaded (so its
+  local-data-driven history never rendered).
+- **The "›" chevron did nothing / looked like a refresh** — offline, the
+  dynamic /borrowers/<name> page wasn't cached, so the service worker fell
+  back to the /borrowers list, which looked like the same page reloading.
+
+Fixes:
+- A cache warmer fetches one borrower's detail page while online, so the
+  shared app shell for /borrowers/[id] is cached. That shell reads each
+  borrower from local data via the URL, so once one is cached, ANY borrower's
+  page (and full payment history) works offline.
+- The service worker now serves a cached detail-page shell for any
+  /borrowers/<name> route offline, instead of dropping to the list.
+
+Once loaded, the detail page shows the full repayment history (dates and
+amounts) entirely from local data.
+
+No database migration needed. Service worker cache bumped to v5 — after
+deploying, open the app once online (and tap into at least one borrower) so
+the detail shell is cached for offline use.
+
 ## New Loan button fixes (latest)
 
 Three problems addressed:

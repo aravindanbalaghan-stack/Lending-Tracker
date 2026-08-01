@@ -1,6 +1,6 @@
 // Bump this version on every deploy that changes app behavior so old caches
 // are cleared and clients pick up the new code.
-const CACHE_NAME = "kanakku-book-v4";
+const CACHE_NAME = "kanakku-book-v5";
 
 const PRECACHE_URLS = [
   "/dashboard",
@@ -79,7 +79,29 @@ self.addEventListener("fetch", (event) => {
           if (isNavigation) {
             const noQuery = await caches.match(url.pathname);
             if (noQuery) return noQuery;
-            const section = "/" + (url.pathname.split("/")[1] || "dashboard");
+
+            const parts = url.pathname.split("/").filter(Boolean);
+            // Dynamic borrower detail page: /borrowers/<name>. These share one
+            // app shell that reads the borrower from local data via the URL,
+            // so ANY previously-cached detail page works as the shell for a
+            // different borrower offline. Find one and serve it, rather than
+            // dropping to the /borrowers list (which looked like a refresh).
+            if (parts[0] === "borrowers" && parts.length >= 2 && parts[1] !== "new") {
+              const cache = await caches.open(CACHE_NAME);
+              const keys = await cache.keys();
+              const detail = keys.find((req) => {
+                const p = new URL(req.url).pathname.split("/").filter(Boolean);
+                return (
+                  p[0] === "borrowers" && p.length >= 2 && p[1] !== "new"
+                );
+              });
+              if (detail) {
+                const cached = await cache.match(detail);
+                if (cached) return cached;
+              }
+            }
+
+            const section = "/" + (parts[0] || "dashboard");
             const sectionMatch = await caches.match(section);
             if (sectionMatch) return sectionMatch;
             return caches.match("/dashboard");

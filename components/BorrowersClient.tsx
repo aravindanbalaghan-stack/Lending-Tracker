@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { dateKey } from "@/lib/calculations";
 import { WEEKDAYS, scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
@@ -75,6 +75,26 @@ export default function BorrowersClient() {
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [loans, repayments, settings]);
+
+  // Cache warmer: when online, fetch one borrower's detail page so the app
+  // shell for /borrowers/[id] is stored by the service worker. That shell
+  // reads the specific borrower from local data via the URL, so once ONE is
+  // cached, tapping any borrower works offline — showing their full payment
+  // history. Without this, the detail page can't load offline and the tap
+  // looks like a refresh.
+  const warmedRef = useRef(false);
+  useEffect(() => {
+    if (warmedRef.current) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+    const first = entries[0];
+    if (!first) return;
+    warmedRef.current = true;
+    // Fetch through the SW so the response is cached for offline navigation.
+    fetch(`/borrowers/${encodeURIComponent(first.name)}`).catch(() => {
+      // best-effort; if it fails we simply try again next mount
+      warmedRef.current = false;
+    });
+  }, [entries]);
 
   const counts = useMemo(() => {
     const c: Record<ScheduleGroup, number> = { daily: 0, weekly: 0, monthly: 0 };
