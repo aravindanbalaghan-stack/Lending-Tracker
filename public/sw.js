@@ -1,9 +1,7 @@
-// Bump the cache version whenever this file changes so old caches are cleared.
-const CACHE_NAME = "kanakku-book-v2";
+// Bump this version on every deploy that changes app behavior so old caches
+// are cleared and clients pick up the new code.
+const CACHE_NAME = "kanakku-book-v3";
 
-// Precache every top-level app route so navigation works offline even if the
-// user hasn't visited that tab yet in this session. Dynamic routes like
-// /borrowers/[id] can't be listed here, so they're handled at fetch time.
 const PRECACHE_URLS = [
   "/dashboard",
   "/borrowers",
@@ -22,6 +20,7 @@ self.addEventListener("install", (event) => {
       .then((cache) => cache.addAll(PRECACHE_URLS))
       .catch(() => {})
   );
+  // Activate this new SW immediately instead of waiting for old tabs to close.
   self.skipWaiting();
 });
 
@@ -34,30 +33,35 @@ self.addEventListener("activate", (event) => {
           keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
         )
       )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
+});
+
+// Allow the page to tell a waiting SW to activate right away.
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
-  // Data must always go live to Supabase — never served from cache. The app's
-  // own IndexedDB layer is what makes data available offline, not this cache.
+  // Data must always go live to Supabase — never served from cache.
   if (request.url.includes("supabase.co")) return;
 
   const url = new URL(request.url);
 
-  // For page navigations (HTML documents), use network-first, then fall back
-  // to a cached version of the SAME path, then to a sensible app route.
-  // Crucially, a dynamic route like /borrowers/<name> that isn't cached falls
-  // back to /borrowers (its section) rather than always to the dashboard —
-  // this fixes swipe→repay and tab navigation landing on the wrong screen.
   const isNavigation =
     request.mode === "navigate" ||
     (request.headers.get("accept") || "").includes("text/html");
 
-  if (isNavigation) {
+  // NETWORK-FIRST for page navigations AND the app's own build assets
+  // (Next.js chunks live under /_next/). This ensures that whenever the phone
+  // has a connection, it gets the LATEST code — fixing "sometimes old,
+  // sometimes new behavior". It only falls back to cache when truly offline.
+  const isAppAsset = url.pathname.startsWith("/_next/");
+
+  if (isNavigation || isAppAsset) {
     event.respondWith(
       fetch(request)
         .then((response) => {
@@ -69,25 +73,24 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(async () => {
-          // 1) exact cached page for this path
           const exact = await caches.match(request);
           if (exact) return exact;
-          // 2) cached page for the pathname without query string
-          const noQuery = await caches.match(url.pathname);
-          if (noQuery) return noQuery;
-          // 3) the section root (e.g. /borrowers/xyz -> /borrowers)
-          const section = "/" + (url.pathname.split("/")[1] || "dashboard");
-          const sectionMatch = await caches.match(section);
-          if (sectionMatch) return sectionMatch;
-          // 4) last resort
-          return caches.match("/dashboard");
+          if (isNavigation) {
+            const noQuery = await caches.match(url.pathname);
+            if (noQuery) return noQuery;
+            const section = "/" + (url.pathname.split("/")[1] || "dashboard");
+            const sectionMatch = await caches.match(section);
+            if (sectionMatch) return sectionMatch;
+            return caches.match("/dashboard");
+          }
+          return undefined;
         })
     );
     return;
   }
 
-  // Non-navigation assets (JS, CSS, fonts, images): cache-first for speed and
-  // offline resilience, updating the cache in the background.
+  // Other static assets (fonts, images, icons): cache-first is fine since
+  // they rarely change and are fingerprinted when they do.
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request)

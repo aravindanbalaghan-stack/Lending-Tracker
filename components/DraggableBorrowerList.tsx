@@ -135,42 +135,67 @@ export default function DraggableBorrowerList({
                   : []
               }
             >
-              <Link
-                href={`/borrowers/${encodeURIComponent(e.name)}`}
+              <div
                 data-loan-id={e.loanId}
-                className="flex items-center justify-between min-w-0 py-3 pr-3"
+                className="flex items-center justify-between min-w-0 py-3 pr-2"
               >
-                <span className="min-w-0">
+                {/* Tapping the borrower body records a payment inline (the
+                    primary field action). No navigation, so it's identical
+                    online and offline. Settled loans just show details. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (e.outstanding > 0) {
+                      setRepayOpenId(
+                        repayOpenId === e.loanId ? null : e.loanId
+                      );
+                    }
+                  }}
+                  className="flex-1 min-w-0 text-left"
+                >
                   <span className="block text-sm text-ink font-medium truncate">
                     {e.name}
                     {e.nameTa && (
                       <span className="text-ink-soft font-normal"> · {e.nameTa}</span>
                     )}
                   </span>
+                  <span className="block text-xs text-ink-soft">
+                    {t("borrowers_given")} {formatINR(e.principal)}
+                  </span>
+                </button>
+
+                <div className="flex items-center gap-2 shrink-0 ml-2">
                   {e.phone && (
                     <a
                       href={`tel:${e.phone}`}
                       onClick={(ev) => ev.stopPropagation()}
-                      className="inline-flex items-center gap-1 text-xs text-forest mt-0.5"
+                      className="text-forest text-base"
+                      aria-label={`Call ${e.name}`}
                     >
-                      <span aria-hidden>📞</span>
-                      {e.phone}
+                      📞
                     </a>
                   )}
-                  <span className="block text-xs text-ink-soft">
-                    {t("borrowers_given")} {formatINR(e.principal)}
+                  <span
+                    className={`tabular text-sm ${
+                      e.outstanding > 0 ? "text-rust" : "text-forest"
+                    }`}
+                  >
+                    {e.outstanding > 0
+                      ? `${formatINR(e.outstanding)} ${t("borrowers_due")}`
+                      : t("borrowers_settled")}
                   </span>
-                </span>
-                <span
-                  className={`tabular text-sm shrink-0 ml-2 ${
-                    e.outstanding > 0 ? "text-rust" : "text-forest"
-                  }`}
-                >
-                  {e.outstanding > 0
-                    ? `${formatINR(e.outstanding)} ${t("borrowers_due")}`
-                    : t("borrowers_settled")}
-                </span>
-              </Link>
+                  {/* Explicit link to the full borrower page. This is the ONLY
+                      navigation on the row, so tapping the body never
+                      accidentally navigates. */}
+                  <Link
+                    href={`/borrowers/${encodeURIComponent(e.name)}`}
+                    className="text-ink-soft text-lg px-1 leading-none"
+                    aria-label={`${e.name} details`}
+                  >
+                    ›
+                  </Link>
+                </div>
+              </div>
             </SwipeableRow>
           </div>
           </div>

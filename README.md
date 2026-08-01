@@ -7,6 +7,30 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Consistent repay behavior + reliable updates (latest)
+
+Two root causes were behind the inconsistent "sometimes navigates, sometimes
+inline, sometimes nothing" repay behavior:
+
+1. **Overlapping tap targets.** The borrower row was a navigating link with a
+   swipe-repay layered on top, so a tap could land on either — navigating OR
+   opening the form depending on exactly where you touched. Redesigned: the
+   row body is now a single button that opens the inline repayment form
+   (primary field action), the phone icon calls, and a small "›" chevron is
+   the ONLY navigation to the full borrower page. No more ambiguity.
+2. **Stale cached code.** The service worker served the app's JS cache-first,
+   so phones kept running OLD code after a deploy — which is why old and new
+   behavior both appeared. The service worker is now network-first for app
+   code (always gets the latest when online, cache only when truly offline),
+   auto-activates new versions, and reloads once to apply them. Cache bumped
+   to v3.
+
+Recording a repayment now behaves identically every time, online or offline.
+
+No database migration is needed for this update. After deploying, the tester
+should open the app once online — it will update itself to the new version
+automatically from then on.
+
 ## Offline repay fix — inline, no navigation (latest)
 
 The swipe-to-Repay on the Borrowers list previously NAVIGATED to the
