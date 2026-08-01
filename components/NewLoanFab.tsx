@@ -10,10 +10,17 @@ export default function NewLoanFab() {
   const { t } = useLanguage();
   const pathname = usePathname();
 
-  const hideOn = ["/login", "/pending", "/borrowers/new"];
-  if (hideOn.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
-    return null;
-  }
+  // Hide only where the button doesn't belong: auth screens and the new-loan
+  // form itself. Use exact matches (plus sub-paths for auth) so a stale or
+  // transitional pathname can't leave the button hidden on normal screens.
+  const hidden =
+    pathname === "/borrowers/new" ||
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/pending" ||
+    pathname.startsWith("/pending/");
+
+  if (hidden) return null;
 
   return (
     <Link

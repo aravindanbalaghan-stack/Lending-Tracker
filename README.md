@@ -7,6 +7,27 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## New Loan button fixes (latest)
+
+Three problems addressed:
+
+1. **FAB redirected to Borrowers tab.** The New Loan page (/borrowers/new)
+   wasn't in the service worker's precache list, so offline (or on a failed
+   fetch) it fell back to the /borrowers section. Added /borrowers/new to the
+   precache so it always opens.
+2. **New Loan button stayed hidden after saving.** The floating button hid
+   whenever the path started with /borrowers/new, so a stale/transitional
+   path could keep it hidden. It now hides only on an exact /borrowers/new
+   match, so it reliably reappears.
+3. **Slow save ("loading for a while").** Saving now writes locally, queues
+   durably, and returns immediately — the server push happens in the
+   background. Save feels instant online, offline, or on a flaky connection,
+   and the record still syncs reliably (with automatic retry). Applied to both
+   loan and repayment creation.
+
+No database migration is needed. Service worker cache bumped to v4 — after
+deploying, open the app once online so it updates.
+
 ## Consistent repay behavior + reliable updates (latest)
 
 Two root causes were behind the inconsistent "sometimes navigates, sometimes

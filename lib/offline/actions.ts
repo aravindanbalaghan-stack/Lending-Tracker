@@ -31,7 +31,7 @@ type InsertError = { message: string; code?: string } | null;
 // freeze the UI. Returns the error (or null on success), or TIMED_OUT.
 async function withInsertTimeout(
   promise: PromiseLike<{ error: InsertError }>,
-  ms = 4000
+  ms = 3000
 ): Promise<InsertError | typeof TIMED_OUT> {
   const timeout = new Promise<typeof TIMED_OUT>((resolve) =>
     setTimeout(() => resolve(TIMED_OUT), ms)
@@ -126,29 +126,29 @@ export async function createLoanOffline(
     return { ok: false, error: "Could not save locally. Please try again." };
   }
 
-  // Then try to reach the server. On ANY failure or uncertainty, queue to the
-  // outbox so the record is durably retried — never dropped. Duplicate-key on
-  // later retry is treated as already-synced, so double-queuing is harmless.
+  // Durably queue for sync, then return IMMEDIATELY so the UI never waits on
+  // the network. The actual server push happens in the background (below) and
+  // removes this queued entry on success; if the app closes first, the next
+  // sync flushes it. This makes Save feel instant online, offline, or on a
+  // flaky connection.
+  const entryId = await enqueueOutboxReturningId("insert_loan", loan);
+
+  // Fire-and-forget background push. We intentionally do NOT await this.
   if (typeof navigator !== "undefined" && navigator.onLine) {
-    try {
-      const supabase = createClient();
-      // Race against a timeout: on flaky connectivity a request can hang for
-      // a long time. If it doesn't complete quickly, queue to the outbox and
-      // move on so the UI never freezes waiting.
-      const insert = supabase.from("loans").insert(loan);
-      const error = await withInsertTimeout(insert);
-      if (error === TIMED_OUT) {
-        await enqueueOutbox("insert_loan", loan);
-      } else if (error && error.code !== "23505") {
-        console.error("Loan sync failed, queued for retry:", error.message);
-        await enqueueOutbox("insert_loan", loan);
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const insert = supabase.from("loans").insert(loan);
+        const error = await withInsertTimeout(insert);
+        if (error !== TIMED_OUT && (!error || error.code === "23505")) {
+          // Reached the server (or already there) → drop the queued copy.
+          await removeOutboxEntry(entryId);
+        }
+        // On timeout or real error, leave it queued for automatic retry.
+      } catch (e) {
+        console.error("Background loan sync failed, will retry:", e);
       }
-    } catch (e) {
-      console.error("Loan sync threw, queued for retry:", e);
-      await enqueueOutbox("insert_loan", loan);
-    }
-  } else {
-    await enqueueOutbox("insert_loan", loan);
+    })();
   }
 
   return { ok: true, id: loan.id };
@@ -173,23 +173,23 @@ export async function createRepaymentOffline(
     return { ok: false, error: "Could not save locally. Please try again." };
   }
 
+  // Queue durably, return immediately, push in the background (same pattern as
+  // loan creation) so recording a payment is instant regardless of network.
+  const entryId = await enqueueOutboxReturningId("insert_repayment", repayment);
+
   if (typeof navigator !== "undefined" && navigator.onLine) {
-    try {
-      const supabase = createClient();
-      const insert = supabase.from("repayments").insert(repayment);
-      const error = await withInsertTimeout(insert);
-      if (error === TIMED_OUT) {
-        await enqueueOutbox("insert_repayment", repayment);
-      } else if (error && error.code !== "23505") {
-        console.error("Repayment sync failed, queued for retry:", error.message);
-        await enqueueOutbox("insert_repayment", repayment);
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const insert = supabase.from("repayments").insert(repayment);
+        const error = await withInsertTimeout(insert);
+        if (error !== TIMED_OUT && (!error || error.code === "23505")) {
+          await removeOutboxEntry(entryId);
+        }
+      } catch (e) {
+        console.error("Background repayment sync failed, will retry:", e);
       }
-    } catch (e) {
-      console.error("Repayment sync threw, queued for retry:", e);
-      await enqueueOutbox("insert_repayment", repayment);
-    }
-  } else {
-    await enqueueOutbox("insert_repayment", repayment);
+    })();
   }
 
   return { ok: true };

@@ -1,10 +1,11 @@
 // Bump this version on every deploy that changes app behavior so old caches
 // are cleared and clients pick up the new code.
-const CACHE_NAME = "kanakku-book-v3";
+const CACHE_NAME = "kanakku-book-v4";
 
 const PRECACHE_URLS = [
   "/dashboard",
   "/borrowers",
+  "/borrowers/new",
   "/repay",
   "/delayed",
   "/missed",
