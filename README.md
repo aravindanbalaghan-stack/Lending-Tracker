@@ -7,6 +7,31 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Sync reliability — data-loss fix (latest)
+
+Fixes the "imported yesterday, gone today" problem and hardens auto-sync.
+
+**Root cause found:** on login, the app reconciled the local cache with the
+signed-in user, and that reconciliation could clear local data BEFORE pending
+(unsynced) changes were pushed to the server. Combined with a single all-or-
+nothing 200-row import batch, a failed/unfinished sync meant freshly imported
+borrowers lived only on the device — and were wiped on the next login.
+
+**Fixes:**
+- The local cache is NEVER cleared while the outbox still has unsynced items
+  — those changes are kept and flushed first.
+- On app start, pending changes are pushed to the server BEFORE any cache
+  reconciliation.
+- Bulk import now inserts in small batches (50) with a per-batch outbox
+  fallback, so one bad row can't lose the whole import, and any failed chunk
+  is durably queued for retry.
+- Import triggers an immediate sync and waits for it before showing "done".
+- A background sync runs every 30s (when online) as a safety net, so nothing
+  waits for a manual sync. Single creates already synced immediately; this
+  covers everything else.
+
+No database migration is needed for this update.
+
 ## Testing bug fixes (latest)
 
 1. **Settled borrowers no longer show Repay on swipe** — the swipe action

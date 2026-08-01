@@ -493,16 +493,33 @@ export async function createLoansBulkOffline(
 
   await putLoans(loans);
 
+  // Push to the server in modest batches. A smaller batch size means one bad
+  // row (or a transient error) only affects that chunk, not all 200 — and
+  // any failed chunk is queued to the outbox so the next sync retries it.
+  // This is what prevents "imported yesterday, gone today": the data either
+  // reaches the server now or is durably queued to reach it later.
   if (typeof navigator !== "undefined" && navigator.onLine) {
     const supabase = createClient();
-    const BATCH_SIZE = 200;
+    const BATCH_SIZE = 50;
     for (let i = 0; i < loans.length; i += BATCH_SIZE) {
       const batch = loans.slice(i, i + BATCH_SIZE);
-      const { error } = await supabase.from("loans").insert(batch);
-      if (error) await enqueueOutbox("insert_loans_bulk", batch);
+      try {
+        const { error } = await supabase.from("loans").insert(batch);
+        if (error) {
+          console.error("Import batch failed, queued for retry:", error.message);
+          await enqueueOutbox("insert_loans_bulk", batch);
+        }
+      } catch (e) {
+        console.error("Import batch threw, queued for retry:", e);
+        await enqueueOutbox("insert_loans_bulk", batch);
+      }
     }
   } else {
-    await enqueueOutbox("insert_loans_bulk", loans);
+    // Offline: queue in batches so processing is resilient.
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < loans.length; i += BATCH_SIZE) {
+      await enqueueOutbox("insert_loans_bulk", loans.slice(i, i + BATCH_SIZE));
+    }
   }
 
   return { ok: true, count: loans.length };

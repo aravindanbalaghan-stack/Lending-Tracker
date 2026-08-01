@@ -6,6 +6,7 @@ import {
   createLoansBulkOffline,
   createRepaymentsBulkOffline,
 } from "@/lib/offline/actions";
+import { syncNow } from "@/lib/offline/sync";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import {
@@ -164,6 +165,13 @@ export default function ImportWizard() {
         phone: loan.phone,
       }));
       const result = await createLoansBulkOffline(rows);
+      // Push to the server right away and wait for it, so the "done" screen
+      // reflects data that has actually reached Supabase — not just local.
+      try {
+        await syncNow();
+      } catch {
+        // queued; will retry automatically
+      }
       setImporting(false);
       if (!result.ok) {
         setError(result.error ?? "Something went wrong.");
@@ -179,6 +187,11 @@ export default function ImportWizard() {
         paid_at: p.paid_at,
       }));
       const result = await createRepaymentsBulkOffline(rows);
+      try {
+        await syncNow();
+      } catch {
+        // queued; will retry automatically
+      }
       setImporting(false);
       if (!result.ok) {
         setError(result.error ?? "Something went wrong.");

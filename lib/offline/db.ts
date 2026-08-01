@@ -253,14 +253,30 @@ export async function ensureLocalDataMatchesUser(
   const metaRecord = await db.get("meta", "currentUserId").catch(() => undefined);
   const storedUserId: string | undefined = metaRecord?.value;
 
+  // SAFETY: never silently discard unsynced changes. If the outbox still has
+  // pending items, those local changes have NOT reached the server yet, so
+  // clearing local data would lose them permanently. In that case we keep the
+  // data and let the sync process flush it first.
+  const outbox = await db.getAll("outbox").catch(() => []);
+  const hasUnsynced = outbox.length > 0;
+
   if (!userId) {
-    await clearAllLocalData();
-    await db.delete("meta", "currentUserId").catch(() => {});
+    // Signing out. Only clear if everything is safely synced.
+    if (!hasUnsynced) {
+      await clearAllLocalData();
+      await db.delete("meta", "currentUserId").catch(() => {});
+    }
+    // If there ARE unsynced items, keep them so the next sync can push them.
     return;
   }
 
   if (storedUserId !== userId) {
-    await clearAllLocalData();
+    // A genuinely different account is signing in on this device. If the
+    // previous user left unsynced changes, don't destroy them blindly —
+    // keep them so they can still sync. Only clear when it's safe.
+    if (!hasUnsynced) {
+      await clearAllLocalData();
+    }
     await db.put("meta", { key: "currentUserId", value: userId });
   }
 }

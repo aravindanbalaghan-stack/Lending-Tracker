@@ -49,12 +49,26 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     setIsOnline(navigator.onLine);
 
     async function init() {
-      // Guard first: make sure the local cache actually belongs to
-      // whoever is currently signed in before reading or syncing anything.
       const supabase = createClient();
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
+      // CRITICAL ORDER: push any pending local changes to the server FIRST,
+      // before the user-guard might clear the cache. This prevents the
+      // data-loss case where freshly-imported records that hadn't synced yet
+      // were wiped on the next login. processOutbox is safe to run for the
+      // signed-in user; it only sends what's queued.
+      if (navigator.onLine && session?.user?.id) {
+        try {
+          await syncNow();
+        } catch {
+          // best-effort; guard below still runs
+        }
+      }
+
+      // Now it's safe to reconcile the cache with the signed-in user. The
+      // guard itself also refuses to clear while the outbox is non-empty.
       await ensureLocalDataMatchesUser(session?.user?.id ?? null);
 
       refreshPendingCount();
@@ -74,9 +88,19 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("offline", handleOffline);
     const unsubscribe = subscribeDb(refreshPendingCount);
 
+    // Safety net: every 30s, if online, flush anything still queued. This
+    // means a change never waits for a manual sync — worst case it syncs
+    // within half a minute, and usually immediately on creation.
+    const interval = setInterval(() => {
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        triggerSync();
+      }
+    }, 30000);
+
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      clearInterval(interval);
       unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
