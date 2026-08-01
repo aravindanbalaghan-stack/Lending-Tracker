@@ -7,6 +7,35 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Data-safety hardening audit (latest)
+
+A full review of every data-persistence path, to make data loss structurally
+very unlikely:
+
+- **Outbox-first bulk import.** Imports now record every batch in the durable
+  outbox BEFORE the direct insert, then remove each batch only once the server
+  confirms it. If the browser is killed or the network drops mid-import, the
+  batches survive and sync on next open. (This directly addresses the earlier
+  200-borrower loss.)
+- **Local-write failures no longer fail silently.** Every create/save wraps
+  the local IndexedDB write in error handling and reports failure instead of
+  falsely showing success (important on iOS Safari, where storage can reject).
+- **One bad record can't block the whole sync queue.** Sync now separates
+  transient errors (network/timeout/5xx → retry in order) from permanent ones
+  (schema/constraint → skip that entry, keep the rest flowing, leave it queued
+  to succeed once fixed). Previously a single schema mismatch (like a missing
+  column) stalled ALL syncing.
+- **Duplicate-safe retries.** Records already on the server (duplicate key) are
+  treated as synced, so retries never loop forever or double-insert.
+- **Every network call is now wrapped** so a thrown fetch queues to the outbox
+  rather than crashing the save.
+- Sync errors are surfaced prominently in the banner so a stuck state is
+  visible, not silent.
+
+No database migration is needed for this update. (But ensure migrations
+007-010 have been run in Supabase — a missing column is exactly the kind of
+permanent error the queue now tolerates instead of stalling on.)
+
 ## Sync reliability — data-loss fix (latest)
 
 Fixes the "imported yesterday, gone today" problem and hardens auto-sync.

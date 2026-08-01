@@ -27,8 +27,8 @@ export default function OfflineBanner() {
             </button>
           </span>
           {lastError && (
-            <p className="text-rust mt-0.5">
-              {t("offline_syncError")}: {lastError}
+            <p className="text-rust mt-0.5 font-medium">
+              ⚠ {t("offline_syncError")}: {lastError}
             </p>
           )}
         </div>

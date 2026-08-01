@@ -9,6 +9,8 @@ import {
   putDailyEntry,
   putSettings,
   enqueueOutbox,
+  enqueueOutboxReturningId,
+  removeOutboxEntry,
   getAllLoans,
   getAllRepayments,
   deleteLoanLocal,
@@ -56,14 +58,28 @@ export async function createLoanOffline(
   };
 
   // Write locally first — this is what makes the UI update instantly and
-  // work offline. Syncing to Supabase happens after, best-effort.
-  await putLoan(loan);
+  // work offline. If this throws (quota, private mode, etc.) we surface it
+  // rather than pretending the save worked.
+  try {
+    await putLoan(loan);
+  } catch (e) {
+    console.error("Local save failed:", e);
+    return { ok: false, error: "Could not save locally. Please try again." };
+  }
 
+  // Then try to reach the server. On ANY failure or uncertainty, queue to the
+  // outbox so the record is durably retried — never dropped. Duplicate-key on
+  // later retry is treated as already-synced, so double-queuing is harmless.
   if (typeof navigator !== "undefined" && navigator.onLine) {
-    const supabase = createClient();
-    const { error } = await supabase.from("loans").insert(loan);
-    if (error) {
-      console.error("Loan sync failed, queued for retry:", error.message);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("loans").insert(loan);
+      if (error && error.code !== "23505") {
+        console.error("Loan sync failed, queued for retry:", error.message);
+        await enqueueOutbox("insert_loan", loan);
+      }
+    } catch (e) {
+      console.error("Loan sync threw, queued for retry:", e);
       await enqueueOutbox("insert_loan", loan);
     }
   } else {
@@ -85,13 +101,23 @@ export async function createRepaymentOffline(
     ...input,
   };
 
-  await putRepayment(repayment);
+  try {
+    await putRepayment(repayment);
+  } catch (e) {
+    console.error("Local save failed:", e);
+    return { ok: false, error: "Could not save locally. Please try again." };
+  }
 
   if (typeof navigator !== "undefined" && navigator.onLine) {
-    const supabase = createClient();
-    const { error } = await supabase.from("repayments").insert(repayment);
-    if (error) {
-      console.error("Repayment sync failed, queued for retry:", error.message);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("repayments").insert(repayment);
+      if (error && error.code !== "23505") {
+        console.error("Repayment sync failed, queued for retry:", error.message);
+        await enqueueOutbox("insert_repayment", repayment);
+      }
+    } catch (e) {
+      console.error("Repayment sync threw, queued for retry:", e);
       await enqueueOutbox("insert_repayment", repayment);
     }
   } else {
@@ -115,14 +141,23 @@ export async function saveDailyEntry(
     expenses: values.expenses,
   };
 
-  await putDailyEntry(entry);
+  try {
+    await putDailyEntry(entry);
+  } catch (e) {
+    console.error("Local save failed:", e);
+    return { ok: false, error: "Could not save locally. Please try again." };
+  }
 
   if (typeof navigator !== "undefined" && navigator.onLine) {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("daily_entries")
-      .upsert(entry, { onConflict: "lender_id,entry_date" });
-    if (error) await enqueueOutbox("upsert_daily_entry", entry);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("daily_entries")
+        .upsert(entry, { onConflict: "lender_id,entry_date" });
+      if (error) await enqueueOutbox("upsert_daily_entry", entry);
+    } catch {
+      await enqueueOutbox("upsert_daily_entry", entry);
+    }
   } else {
     await enqueueOutbox("upsert_daily_entry", entry);
   }
@@ -138,14 +173,23 @@ export async function saveSettings(
 
   const settings: SettingsRecord = { lender_id: userId, ...values };
 
-  await putSettings(settings);
+  try {
+    await putSettings(settings);
+  } catch (e) {
+    console.error("Local save failed:", e);
+    return { ok: false, error: "Could not save locally. Please try again." };
+  }
 
   if (typeof navigator !== "undefined" && navigator.onLine) {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("lender_settings")
-      .upsert(settings, { onConflict: "lender_id" });
-    if (error) await enqueueOutbox("upsert_settings", settings);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("lender_settings")
+        .upsert(settings, { onConflict: "lender_id" });
+      if (error) await enqueueOutbox("upsert_settings", settings);
+    } catch {
+      await enqueueOutbox("upsert_settings", settings);
+    }
   } else {
     await enqueueOutbox("upsert_settings", settings);
   }
@@ -165,18 +209,42 @@ export async function createRepaymentsBulkOffline(
     ...i,
   }));
 
-  await putRepayments(repayments);
+  try {
+    await putRepayments(repayments);
+  } catch (e) {
+    console.error("Local bulk repayment save failed:", e);
+    return {
+      ok: false,
+      count: 0,
+      error: "Could not save the import locally. Please try again.",
+    };
+  }
+
+  const BATCH_SIZE = 50;
+  const batches: { entryId: number; batch: RepaymentRecord[] }[] = [];
+  for (let i = 0; i < repayments.length; i += BATCH_SIZE) {
+    const batch = repayments.slice(i, i + BATCH_SIZE);
+    const entryId = await enqueueOutboxReturningId(
+      "insert_repayments_bulk",
+      batch
+    );
+    batches.push({ entryId, batch });
+  }
 
   if (typeof navigator !== "undefined" && navigator.onLine) {
     const supabase = createClient();
-    const BATCH_SIZE = 200;
-    for (let i = 0; i < repayments.length; i += BATCH_SIZE) {
-      const batch = repayments.slice(i, i + BATCH_SIZE);
-      const { error } = await supabase.from("repayments").insert(batch);
-      if (error) await enqueueOutbox("insert_repayments_bulk", batch);
+    for (const { entryId, batch } of batches) {
+      try {
+        const { error } = await supabase.from("repayments").insert(batch);
+        if (!error || error.code === "23505") {
+          await removeOutboxEntry(entryId);
+        } else {
+          console.error("Repayment import batch failed, will retry:", error.message);
+        }
+      } catch (e) {
+        console.error("Repayment import batch threw, will retry:", e);
+      }
     }
-  } else {
-    await enqueueOutbox("insert_repayments_bulk", repayments);
   }
 
   return { ok: true, count: repayments.length };
@@ -491,34 +559,45 @@ export async function createLoansBulkOffline(
     };
   });
 
-  await putLoans(loans);
+  try {
+    await putLoans(loans);
+  } catch (e) {
+    console.error("Local bulk save failed:", e);
+    return {
+      ok: false,
+      count: 0,
+      error: "Could not save the import locally. Please try again.",
+    };
+  }
 
-  // Push to the server in modest batches. A smaller batch size means one bad
-  // row (or a transient error) only affects that chunk, not all 200 — and
-  // any failed chunk is queued to the outbox so the next sync retries it.
-  // This is what prevents "imported yesterday, gone today": the data either
-  // reaches the server now or is durably queued to reach it later.
+  // OUTBOX-FIRST durability: queue every batch to the outbox BEFORE attempting
+  // the direct insert. This is the key protection against "imported, then
+  // gone" — even if the browser is killed mid-import or the network drops, the
+  // batches are durably recorded and will sync on the next app open. We then
+  // try a direct insert for speed; on success we remove that batch's outbox
+  // entry, on failure we leave it for automatic retry.
+  const BATCH_SIZE = 50;
+  const batches: { entryId: number; batch: LoanRecord[] }[] = [];
+  for (let i = 0; i < loans.length; i += BATCH_SIZE) {
+    const batch = loans.slice(i, i + BATCH_SIZE);
+    const entryId = await enqueueOutboxReturningId("insert_loans_bulk", batch);
+    batches.push({ entryId, batch });
+  }
+
   if (typeof navigator !== "undefined" && navigator.onLine) {
     const supabase = createClient();
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < loans.length; i += BATCH_SIZE) {
-      const batch = loans.slice(i, i + BATCH_SIZE);
+    for (const { entryId, batch } of batches) {
       try {
         const { error } = await supabase.from("loans").insert(batch);
-        if (error) {
-          console.error("Import batch failed, queued for retry:", error.message);
-          await enqueueOutbox("insert_loans_bulk", batch);
+        if (!error || error.code === "23505") {
+          // Reached the server (or already there) → drop the queued copy.
+          await removeOutboxEntry(entryId);
+        } else {
+          console.error("Import batch failed, will retry:", error.message);
         }
       } catch (e) {
-        console.error("Import batch threw, queued for retry:", e);
-        await enqueueOutbox("insert_loans_bulk", batch);
+        console.error("Import batch threw, will retry:", e);
       }
-    }
-  } else {
-    // Offline: queue in batches so processing is resilient.
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < loans.length; i += BATCH_SIZE) {
-      await enqueueOutbox("insert_loans_bulk", loans.slice(i, i + BATCH_SIZE));
     }
   }
 

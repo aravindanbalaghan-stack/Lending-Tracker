@@ -216,6 +216,23 @@ export async function enqueueOutbox(
   notify();
 }
 
+// Same as enqueueOutbox but returns the auto-generated localId, so a caller
+// that also does a direct insert can remove this queued copy once the server
+// confirms success (outbox-first durability pattern).
+export async function enqueueOutboxReturningId(
+  type: OutboxEntry["type"],
+  payload: unknown
+): Promise<number> {
+  const db = await getDb();
+  const id = await db.add("outbox", {
+    type,
+    payload,
+    createdAt: new Date().toISOString(),
+  } as OutboxEntry);
+  notify();
+  return id as number;
+}
+
 export async function getOutbox(): Promise<OutboxEntry[]> {
   const db = await getDb();
   return db.getAll("outbox");
