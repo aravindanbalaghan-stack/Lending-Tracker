@@ -10,6 +10,7 @@ export type DraggableEntry = {
   loanId: string;
   name: string;
   nameTa: string | null;
+  phone: string | null;
   principal: number;
   outstanding: number;
 };
@@ -22,12 +23,12 @@ export default function DraggableBorrowerList({
   entries,
   t,
   onReorder,
-  onDelete,
+  onRepay,
 }: {
   entries: DraggableEntry[];
   t: (key: TranslationKey) => string;
   onReorder: (orderedIds: string[]) => void;
-  onDelete: (loanId: string) => void;
+  onRepay: (loanId: string) => void;
 }) {
   const [order, setOrder] = useState<string[]>(entries.map((e) => e.loanId));
   const [dragging, setDragging] = useState<string | null>(null);
@@ -119,9 +120,9 @@ export default function DraggableBorrowerList({
             <SwipeableRow
               actions={[
                 {
-                  label: t("detail_deleteLoan"),
-                  color: "bg-rust",
-                  onClick: () => onDelete(e.loanId),
+                  label: t("repay_action"),
+                  color: "bg-forest",
+                  onClick: () => onRepay(e.loanId),
                 },
               ]}
             >
@@ -137,6 +138,16 @@ export default function DraggableBorrowerList({
                       <span className="text-ink-soft font-normal"> · {e.nameTa}</span>
                     )}
                   </span>
+                  {e.phone && (
+                    <a
+                      href={`tel:${e.phone}`}
+                      onClick={(ev) => ev.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-xs text-forest mt-0.5"
+                    >
+                      <span aria-hidden>📞</span>
+                      {e.phone}
+                    </a>
+                  )}
                   <span className="block text-xs text-ink-soft">
                     {t("borrowers_given")} {formatINR(e.principal)}
                   </span>

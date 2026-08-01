@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { dateKey } from "@/lib/calculations";
 import { WEEKDAYS, scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
@@ -9,13 +10,14 @@ import type { TranslationKey } from "@/lib/i18n";
 import { useLocalData } from "@/lib/offline/useLocalData";
 import { SkeletonList } from "@/components/Skeletons";
 import { findDelayedLoans, delayedLoanIdSet } from "@/lib/delayed";
-import { reorderLoansOffline, softDeleteLoanOffline } from "@/lib/offline/actions";
+import { reorderLoansOffline } from "@/lib/offline/actions";
 import DraggableBorrowerList from "@/components/DraggableBorrowerList";
 
 type LoanEntry = {
   loanId: string;
   name: string;
   nameTa: string | null;
+  phone: string | null;
   principal: number;
   outstanding: number;
   dateKey: string;
@@ -34,6 +36,7 @@ const TABS: { key: ScheduleGroup; labelKey: TranslationKey }[] = [
 export default function BorrowersClient() {
   const { lang, t } = useLanguage();
   const { loans, repayments, settings, loading } = useLocalData();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<ScheduleGroup>("daily");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -62,6 +65,7 @@ export default function BorrowersClient() {
         loanId: l.id,
         name: l.borrower_name,
         nameTa: l.borrower_name_ta,
+        phone: l.phone,
         principal: Number(l.principal),
         outstanding:
           Number(l.payback_amount) - (paidByLoanId.get(l.id) ?? 0),
@@ -134,8 +138,15 @@ export default function BorrowersClient() {
     await reorderLoansOffline(orders);
   }
 
-  async function handleDelete(loanId: string) {
-    await softDeleteLoanOffline(loanId);
+  function handleRepay(loanId: string) {
+    // Take the user into the borrower's page with the repayment form open,
+    // so the swipe "Repay" leads straight into recording a payment.
+    const entry = entries.find((e) => e.loanId === loanId);
+    if (entry) {
+      router.push(
+        `/borrowers/${encodeURIComponent(entry.name)}?repay=${loanId}`
+      );
+    }
   }
 
   if (loading) return <SkeletonList rows={6} />;
@@ -236,12 +247,13 @@ export default function BorrowersClient() {
                   loanId: e.loanId,
                   name: e.name,
                   nameTa: e.nameTa,
+                  phone: e.phone,
                   principal: e.principal,
                   outstanding: e.outstanding,
                 }))}
                 t={t}
                 onReorder={(orderedIds) => handleReorder(orderedIds)}
-                onDelete={handleDelete}
+                onRepay={handleRepay}
               />
             </div>
           ))}

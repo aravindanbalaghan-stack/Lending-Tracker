@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { formatINR } from "@/lib/calculations";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
@@ -238,7 +238,10 @@ function LoanCard({
   t: (key: TranslationKey) => string;
   borrowerHasOpenLoan: boolean;
 }) {
-  const [showRepayForm, setShowRepayForm] = useState(false);
+  const searchParams = useSearchParams();
+  const [showRepayForm, setShowRepayForm] = useState(
+    () => searchParams.get("repay") === loan.id
+  );
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingRepaymentId, setEditingRepaymentId] = useState<string | null>(
     null

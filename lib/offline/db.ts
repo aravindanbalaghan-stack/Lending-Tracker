@@ -10,6 +10,7 @@ export type LoanRecord = {
   lender_id: string;
   borrower_name: string;
   borrower_name_ta: string | null;
+  phone: string | null;
   deleted_at: string | null;
   display_order: number;
   repay_display_order: number;

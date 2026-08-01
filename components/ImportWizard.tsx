@@ -40,6 +40,7 @@ function guessLoanMapping(headers: string[]): FieldMapping {
     collection_schedule: ["schedule", "frequency", "collectionday", "day"],
     given_at: ["date", "dategiven", "loandate", "givenon"],
     notes: ["notes", "note", "remarks", "comment", "purpose"],
+    phone: ["phone", "mobile", "number", "contact", "cell"],
   };
   headers.forEach((header, idx) => {
     const norm = normalize(header);
@@ -160,6 +161,7 @@ export default function ImportWizard() {
         collection_schedule: loan.collection_schedule,
         given_at: loan.given_at,
         notes: loan.notes,
+        phone: loan.phone,
       }));
       const result = await createLoansBulkOffline(rows);
       setImporting(false);

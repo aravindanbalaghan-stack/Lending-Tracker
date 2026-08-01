@@ -8,6 +8,7 @@ import { findDelayedLoans } from "@/lib/delayed";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
+import SwipeableRow from "@/components/SwipeableRow";
 import RenewLoanPrompt from "@/components/RenewLoanPrompt";
 import { useLocalData } from "@/lib/offline/useLocalData";
 import { SkeletonList } from "@/components/Skeletons";
@@ -96,50 +97,75 @@ export default function DelayedClient() {
               </h2>
               <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
                 {items.map((loan) => (
-                  <div key={loan.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <Link
-                          href={`/borrowers/${encodeURIComponent(loan.borrower_name)}`}
-                          className="text-sm text-ink font-medium hover:text-forest hover:underline underline-offset-2"
-                        >
-                          {loan.borrower_name}
-                          {loan.borrower_name_ta && (
-                            <span className="text-ink-soft font-normal">
-                              {" "}
-                              · {loan.borrower_name_ta}
-                            </span>
-                          )}
-                        </Link>
-                        <p className="text-xs text-rust">
-                          {loan.daysOverdue} {t("delayed_daysOver")}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="tabular text-sm text-rust">
-                          {formatINR(loan.outstanding)}
-                        </p>
-                        <button
-                          onClick={() =>
+                  <div key={loan.id} className="relative">
+                    <SwipeableRow
+                      actions={[
+                        {
+                          label: t("repay_action"),
+                          color: "bg-forest",
+                          onClick: () =>
                             setOpenLoanId(
                               openLoanId === loan.id ? null : loan.id
-                            )
-                          }
-                          className="text-xs text-forest font-medium underline underline-offset-2"
-                        >
-                          {t("detail_recordRepayment")}
-                        </button>
+                            ),
+                        },
+                      ]}
+                    >
+                      <div className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <Link
+                              href={`/borrowers/${encodeURIComponent(loan.borrower_name)}`}
+                              className="text-sm text-ink font-medium hover:text-forest hover:underline underline-offset-2"
+                            >
+                              {loan.borrower_name}
+                              {loan.borrower_name_ta && (
+                                <span className="text-ink-soft font-normal">
+                                  {" "}
+                                  · {loan.borrower_name_ta}
+                                </span>
+                              )}
+                            </Link>
+                            {loan.phone && (
+                              <a
+                                href={`tel:${loan.phone}`}
+                                onClick={(ev) => ev.stopPropagation()}
+                                className="flex items-center gap-1 text-xs text-forest mt-0.5"
+                              >
+                                <span aria-hidden>📞</span>
+                                {loan.phone}
+                              </a>
+                            )}
+                            <p className="text-xs text-rust">
+                              {loan.daysOverdue} {t("delayed_daysOver")}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="tabular text-sm text-rust">
+                              {formatINR(loan.outstanding)}
+                            </p>
+                            <button
+                              onClick={() =>
+                                setOpenLoanId(
+                                  openLoanId === loan.id ? null : loan.id
+                                )
+                              }
+                              className="text-xs text-forest font-medium underline underline-offset-2"
+                            >
+                              {t("detail_recordRepayment")}
+                            </button>
+                          </div>
+                        </div>
+                        {openLoanId === loan.id && (
+                          <div className="mt-3">
+                            <RepaymentQuickForm
+                              loanId={loan.id}
+                              onSaved={() => handleSaved(loan.id)}
+                              onCancel={() => setOpenLoanId(null)}
+                            />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {openLoanId === loan.id && (
-                      <div className="mt-3">
-                        <RepaymentQuickForm
-                          loanId={loan.id}
-                          onSaved={() => handleSaved(loan.id)}
-                          onCancel={() => setOpenLoanId(null)}
-                        />
-                      </div>
-                    )}
+                    </SwipeableRow>
                   </div>
                 ))}
               </div>

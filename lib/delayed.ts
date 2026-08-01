@@ -5,6 +5,7 @@ export type LoanForDelayCheck = {
   id: string;
   borrower_name: string;
   borrower_name_ta: string | null;
+  phone: string | null;
   principal: number;
   payback_amount: number;
   collection_schedule: string;

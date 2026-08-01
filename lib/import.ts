@@ -44,6 +44,7 @@ export const LOAN_FIELDS = [
   { key: "interest_rate", labelKey: "import_field_rate", required: false },
   { key: "installments_count", labelKey: "import_field_installments", required: false },
   { key: "display_order", labelKey: "import_field_displayOrder", required: false },
+  { key: "phone", labelKey: "import_field_phone", required: false },
   { key: "collection_schedule", labelKey: "import_field_schedule", required: false },
   { key: "given_at", labelKey: "import_field_date", required: false },
   { key: "notes", labelKey: "import_field_notes", required: false },
@@ -72,6 +73,7 @@ export type MappedLoan = {
   collection_schedule: string;
   given_at: string; // ISO date
   notes: string | null;
+  phone: string | null;
 };
 
 export type MapResult = {
@@ -164,6 +166,7 @@ export function mapRows(
     const schedule = normalizedSchedule ?? defaultScheduleForDate(parsedDate);
 
     const notes = get(mapping.notes) || null;
+    const phone = get(mapping.phone) || null;
 
     const displayOrderRaw = get(mapping.display_order);
     const displayOrder = displayOrderRaw
@@ -183,6 +186,7 @@ export function mapRows(
       collection_schedule: schedule,
       given_at: parsedDate.toISOString(),
       notes,
+      phone,
     });
   }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/components/LanguageProvider";
+import SyncIndicator from "@/components/SyncIndicator";
 import type { TranslationKey } from "@/lib/i18n";
 
 // Primary destinations get a bottom tab bar on mobile and inline links on
@@ -45,6 +46,8 @@ export default function NavBarClient({ hasUser }: { hasUser: boolean }) {
               {t("appName")}
             </span>
           </Link>
+
+          <SyncIndicator />
 
           {/* Desktop links — hidden on mobile */}
           <nav className="hidden md:flex items-center gap-3 text-sm flex-wrap justify-end">

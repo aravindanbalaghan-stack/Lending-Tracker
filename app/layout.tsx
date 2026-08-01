@@ -50,6 +50,14 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#1b4332" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* iOS: run fullscreen (no Safari URL bar) when added to home screen. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="Kanakku Book" />
         {/* Set the theme before first paint to avoid a light-mode flash. */}
         <script
           dangerouslySetInnerHTML={{

@@ -30,9 +30,15 @@ export async function getCurrentUserId(): Promise<string | null> {
 export async function createLoanOffline(
   input: Omit<
     LoanRecord,
-    "id" | "lender_id" | "deleted_at" | "display_order" | "repay_display_order"
+    | "id"
+    | "lender_id"
+    | "deleted_at"
+    | "display_order"
+    | "repay_display_order"
+    | "phone"
   > & {
     display_order?: number;
+    phone?: string | null;
   }
 ): Promise<{ ok: boolean; error?: string; id?: string }> {
   const userId = await getCurrentUserId();
@@ -45,6 +51,7 @@ export async function createLoanOffline(
     deleted_at: null,
     display_order: display_order ?? 0,
     repay_display_order: display_order ?? 0,
+    phone: null,
     ...rest,
   };
 
@@ -465,7 +472,8 @@ export async function createLoansBulkOffline(
     | "deleted_at"
     | "display_order"
     | "repay_display_order"
-  > & { display_order?: number })[]
+    | "phone"
+  > & { display_order?: number; phone?: string | null })[]
 ): Promise<{ ok: boolean; count: number; error?: string }> {
   const userId = await getCurrentUserId();
   if (!userId) return { ok: false, count: 0, error: "You must be signed in." };
@@ -478,6 +486,7 @@ export async function createLoansBulkOffline(
       deleted_at: null,
       display_order: display_order ?? 0,
       repay_display_order: display_order ?? 0,
+      phone: null,
       ...rest,
     };
   });

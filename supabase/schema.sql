@@ -6,6 +6,7 @@ create table if not exists loans (
   lender_id uuid not null references auth.users(id) on delete cascade,
   borrower_name text not null check (length(trim(borrower_name)) > 0),
   borrower_name_ta text,
+  phone text,
   deleted_at timestamptz,
   display_order integer not null default 0,
   repay_display_order integer not null default 0,

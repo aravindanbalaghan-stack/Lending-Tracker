@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createRepaymentOffline } from "@/lib/offline/actions";
+import { haptic } from "@/lib/haptics";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function RepaymentQuickForm({
@@ -45,6 +46,7 @@ export default function RepaymentQuickForm({
       return;
     }
 
+    haptic(); // brief confirmation buzz on supported devices
     setAmount("");
     onSaved();
   }

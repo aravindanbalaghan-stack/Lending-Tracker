@@ -33,6 +33,7 @@ export default function NewLoanForm() {
   );
   const [scheduleTouched, setScheduleTouched] = useState(false);
   const [notes, setNotes] = useState("");
+  const [phone, setPhone] = useState("");
   const [overridePayback, setOverridePayback] = useState(false);
   const [paybackOverrideValue, setPaybackOverrideValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +121,7 @@ export default function NewLoanForm() {
       collection_schedule: schedule,
       given_at: new Date(givenAt).toISOString(),
       notes: notes.trim() || null,
+      phone: phone.trim() || null,
     });
     setLoading(false);
 
@@ -265,6 +267,20 @@ export default function NewLoanForm() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-ink-soft mb-1">
+            {t("newLoan_phone")}
+          </label>
+          <input
+            type="tel"
+            inputMode="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest"
+            placeholder={t("newLoan_phonePlaceholder")}
+          />
         </div>
 
         <div>

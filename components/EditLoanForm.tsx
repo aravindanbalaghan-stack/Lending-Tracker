@@ -28,6 +28,7 @@ export default function EditLoanForm({
     loan.collection_schedule as CollectionSchedule
   );
   const [notes, setNotes] = useState(loan.notes ?? "");
+  const [phone, setPhone] = useState(loan.phone ?? "");
   const [overridePayback, setOverridePayback] = useState(false);
   const [paybackOverrideValue, setPaybackOverrideValue] = useState(
     String(loan.payback_amount)
@@ -73,6 +74,7 @@ export default function EditLoanForm({
       collection_schedule: schedule,
       given_at: new Date(givenAt).toISOString(),
       notes: notes.trim() || null,
+      phone: phone.trim() || null,
     });
     setLoading(false);
 
@@ -161,6 +163,20 @@ export default function EditLoanForm({
             </option>
           ))}
         </select>
+      </div>
+
+      <div>
+        <label className="block text-[10px] text-ink-soft mb-1">
+          {t("newLoan_phone")}
+        </label>
+        <input
+          type="tel"
+          inputMode="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder={t("newLoan_phonePlaceholder")}
+          className="w-full rounded-md border border-ledger-line px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest"
+        />
       </div>
 
       <div>

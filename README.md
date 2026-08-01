@@ -7,6 +7,35 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Mobile batch: phone, swipe-repay, dark-mode fix, sync status (latest)
+
+- **Home tidy-up** — removed the "Repayments received / New loans given"
+  descriptive labels on mobile (amounts kept), and removed the Total-pending
+  card. The green "Collected today" card stays.
+- **Swipe = Repay** — swiping a borrower row (Borrowers and Delayed) now
+  reveals a green Repay action that opens the repayment form for that person.
+- **Dark mode background fixed** — a leftover boilerplate CSS rule was forcing
+  a white page background in dark mode; removed. The whole page is now dark.
+- **Phone numbers + tap-to-call** — optional phone field on the New Loan and
+  Edit forms, and importable from a "Phone" CSV column. When set, the number
+  shows under the borrower's name with a 📞 in both Borrowers and Delayed;
+  tapping it dials from the phone.
+- **Haptic feedback** — a short buzz when a payment is recorded (on devices
+  that support vibration; iOS ignores it harmlessly).
+- **Sync status indicator** — a small chip in the top bar shows Synced ✓ /
+  Saving… / Syncing… / Offline so you can trust your data state.
+- **iOS fullscreen meta tags** added so the app runs without Safari's URL bar
+  when launched from the home-screen icon.
+
+### Database change required
+Run `supabase/migrations/010_phone_number.sql` in Supabase's SQL Editor
+(adds a nullable `phone` column). If you haven't already, also run `009`.
+
+### Note on the Delayed tab
+Swipe-to-repay and phone display were added there. Drag-and-drop was
+intentionally NOT added to Delayed — that list auto-sorts by most-overdue,
+which is more useful than manual ordering for an exceptions list.
+
 ## Faster tabs + PIN lock (latest)
 
 **Much faster tab switching.** Every page used to run a server-side auth
