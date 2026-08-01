@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createLoanOffline } from "@/lib/offline/actions";
 import { formatINR, installmentAmount, paybackAmount } from "@/lib/calculations";
@@ -38,6 +38,11 @@ export default function NewLoanForm() {
   const [paybackOverrideValue, setPaybackOverrideValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // A ref guard blocks duplicate submits immediately — React state updates are
+  // async, so relying on `loading` alone can still let a fast double-tap
+  // through before the disabled state applies. This is what prevents the
+  // "clicked multiple times, got multiple loans" bug.
+  const submittingRef = useRef(false);
 
   function handleNameChange(value: string) {
     setBorrowerName(value);
@@ -100,6 +105,9 @@ export default function NewLoanForm() {
     e.preventDefault();
     setError(null);
 
+    // Hard guard: if a submit is already in flight, ignore further taps.
+    if (submittingRef.current) return;
+
     if (!borrowerName.trim() || principalNum <= 0) {
       setError(t("newLoan_error"));
       return;
@@ -109,28 +117,39 @@ export default function NewLoanForm() {
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
-    const result = await createLoanOffline({
-      borrower_name: borrowerName.trim(),
-      borrower_name_ta: borrowerNameTa.trim() || null,
-      principal: principalNum,
-      interest_rate: rateNum,
-      payback_amount: payback,
-      installments_count: installmentsNum,
-      display_order: displayOrder.trim() ? parseInt(displayOrder) || 0 : 0,
-      collection_schedule: schedule,
-      given_at: new Date(givenAt).toISOString(),
-      notes: notes.trim() || null,
-      phone: phone.trim() || null,
-    });
-    setLoading(false);
+    try {
+      const result = await createLoanOffline({
+        borrower_name: borrowerName.trim(),
+        borrower_name_ta: borrowerNameTa.trim() || null,
+        principal: principalNum,
+        interest_rate: rateNum,
+        payback_amount: payback,
+        installments_count: installmentsNum,
+        display_order: displayOrder.trim() ? parseInt(displayOrder) || 0 : 0,
+        collection_schedule: schedule,
+        given_at: new Date(givenAt).toISOString(),
+        notes: notes.trim() || null,
+        phone: phone.trim() || null,
+      });
 
-    if (!result.ok) {
-      setError(result.error ?? "Something went wrong.");
-      return;
+      if (!result.ok) {
+        setError(result.error ?? "Something went wrong.");
+        setLoading(false);
+        submittingRef.current = false;
+        return;
+      }
+
+      // Success — navigate. Keep the guard on so the form can't be
+      // re-submitted during the navigation transition.
+      router.push(`/borrowers/${encodeURIComponent(borrowerName.trim())}`);
+    } catch (err) {
+      console.error("Create loan failed:", err);
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+      submittingRef.current = false;
     }
-
-    router.push(`/borrowers/${encodeURIComponent(borrowerName.trim())}`);
   }
 
   return (

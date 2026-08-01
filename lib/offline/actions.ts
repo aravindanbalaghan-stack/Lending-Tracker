@@ -21,12 +21,71 @@ import {
   type SettingsRecord,
 } from "@/lib/offline/db";
 
+// Sentinel returned when a server request takes too long. Callers treat this
+// like a failure and queue the change to the outbox for durable retry.
+const TIMED_OUT = Symbol("timed-out");
+
+type InsertError = { message: string; code?: string } | null;
+
+// Race a Supabase insert/update against a timeout so flaky connectivity can't
+// freeze the UI. Returns the error (or null on success), or TIMED_OUT.
+async function withInsertTimeout(
+  promise: PromiseLike<{ error: InsertError }>,
+  ms = 4000
+): Promise<InsertError | typeof TIMED_OUT> {
+  const timeout = new Promise<typeof TIMED_OUT>((resolve) =>
+    setTimeout(() => resolve(TIMED_OUT), ms)
+  );
+  const result = await Promise.race([
+    Promise.resolve(promise).then((r) => r.error),
+    timeout,
+  ]);
+  return result;
+}
+
 export async function getCurrentUserId(): Promise<string | null> {
   const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.user?.id ?? null;
+  // getSession() reads the persisted session from local storage and should
+  // not require the network. But to be safe against any implementation that
+  // attempts a token refresh (which would hang offline), we race it against a
+  // short timeout and fall back to reading the stored session directly. This
+  // is critical: offline creates must never hang waiting on auth.
+  try {
+    const sessionPromise = supabase.auth.getSession();
+    const timeout = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 1500)
+    );
+    const result = await Promise.race([sessionPromise, timeout]);
+    if (result && "data" in result) {
+      const id = result.data.session?.user?.id;
+      if (id) return id;
+    }
+  } catch {
+    // fall through to the cached lookup below
+  }
+
+  // Fallback: read the Supabase session straight from localStorage. The
+  // supabase-js client persists it under a key like "sb-<ref>-auth-token".
+  try {
+    if (typeof localStorage !== "undefined") {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const id =
+              parsed?.user?.id ?? parsed?.currentSession?.user?.id ?? null;
+            if (id) return id;
+          }
+        }
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+
+  return null;
 }
 
 export async function createLoanOffline(
@@ -73,8 +132,14 @@ export async function createLoanOffline(
   if (typeof navigator !== "undefined" && navigator.onLine) {
     try {
       const supabase = createClient();
-      const { error } = await supabase.from("loans").insert(loan);
-      if (error && error.code !== "23505") {
+      // Race against a timeout: on flaky connectivity a request can hang for
+      // a long time. If it doesn't complete quickly, queue to the outbox and
+      // move on so the UI never freezes waiting.
+      const insert = supabase.from("loans").insert(loan);
+      const error = await withInsertTimeout(insert);
+      if (error === TIMED_OUT) {
+        await enqueueOutbox("insert_loan", loan);
+      } else if (error && error.code !== "23505") {
         console.error("Loan sync failed, queued for retry:", error.message);
         await enqueueOutbox("insert_loan", loan);
       }
@@ -111,8 +176,11 @@ export async function createRepaymentOffline(
   if (typeof navigator !== "undefined" && navigator.onLine) {
     try {
       const supabase = createClient();
-      const { error } = await supabase.from("repayments").insert(repayment);
-      if (error && error.code !== "23505") {
+      const insert = supabase.from("repayments").insert(repayment);
+      const error = await withInsertTimeout(insert);
+      if (error === TIMED_OUT) {
+        await enqueueOutbox("insert_repayment", repayment);
+      } else if (error && error.code !== "23505") {
         console.error("Repayment sync failed, queued for retry:", error.message);
         await enqueueOutbox("insert_repayment", repayment);
       }

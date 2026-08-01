@@ -7,6 +7,32 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Offline bug fixes (latest)
+
+Fixes four offline problems found in testing:
+
+1. **Couldn't create a loan offline** — the root cause was auth: getting the
+   signed-in user waited on a network call that hangs offline, so the save
+   never completed. Now the user id resolves instantly from the stored
+   session (with a fast fallback), and a 4s timeout on the server insert means
+   the save always completes and queues offline.
+2. **Navigation to some tabs failed offline** — the service worker only
+   precached Dashboard/Borrowers/Login. It now precaches every tab (Repay,
+   Delayed, Missed, Settings too), so all navigation works offline.
+3. **Swipe→Repay bounced to Home / wrong tab highlight** — offline, uncached
+   pages fell back to the dashboard while the URL said otherwise, so the tab
+   highlight and content disagreed. The service worker now falls back to the
+   correct section (e.g. /borrowers) instead of always the dashboard.
+4. **Duplicate loans from repeated Save taps** — because the save hung
+   offline (see #1), repeated taps each queued a create, and all completed
+   when connectivity returned. Fixed by: the hang is gone (#1), an immediate
+   re-entry guard blocks duplicate submits, and the save now always finishes
+   and navigates.
+
+No database migration is needed for this update. Note: the service worker
+cache version was bumped, so testers get the new offline behavior on their
+next online app load.
+
 ## Data-safety hardening audit (latest)
 
 A full review of every data-persistence path, to make data loss structurally
