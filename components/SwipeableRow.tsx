@@ -21,6 +21,11 @@ export default function SwipeableRow({
 
   const MAX = Math.min(actions.length * 84, 220);
 
+  // No actions → render children plainly, no swipe behavior at all.
+  if (actions.length === 0) {
+    return <div className="bg-white">{children}</div>;
+  }
+
   function onPointerDown(e: React.PointerEvent) {
     if (e.pointerType !== "touch") return;
     dragging.current = true;

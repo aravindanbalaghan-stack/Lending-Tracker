@@ -7,6 +7,23 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Testing bug fixes (latest)
+
+1. **Settled borrowers no longer show Repay on swipe** — the swipe action
+   only appears when there's an outstanding balance.
+2. **"Start new loan" prompt only on the latest loan** — for a borrower with
+   several settled loans, only the most recent one offers to start a new
+   loan; older loans still show their history but no renew button.
+3. **Repay tab no longer auto-opens the keyboard** — the search box is no
+   longer auto-focused; tap it when you want to search.
+4. **CSV backup is now re-importable** — the CSV backup uses the exact same
+   columns as Import (Name, Name (Tamil), Amount, Interest Rate, Installments,
+   Display Order, Phone, Schedule, Date Given, Notes), so a backup file can be
+   loaded straight back through Import to restore borrowers. The JSON backup
+   still holds everything including repayment history.
+
+No database migration is needed for this update.
+
 ## Mobile batch: phone, swipe-repay, dark-mode fix, sync status (latest)
 
 - **Home tidy-up** — removed the "Repayments received / New loans given"

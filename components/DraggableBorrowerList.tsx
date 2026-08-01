@@ -118,13 +118,17 @@ export default function DraggableBorrowerList({
 
           <div className="flex-1 min-w-0">
             <SwipeableRow
-              actions={[
-                {
-                  label: t("repay_action"),
-                  color: "bg-forest",
-                  onClick: () => onRepay(e.loanId),
-                },
-              ]}
+              actions={
+                e.outstanding > 0
+                  ? [
+                      {
+                        label: t("repay_action"),
+                        color: "bg-forest",
+                        onClick: () => onRepay(e.loanId),
+                      },
+                    ]
+                  : []
+              }
             >
               <Link
                 href={`/borrowers/${encodeURIComponent(e.name)}`}

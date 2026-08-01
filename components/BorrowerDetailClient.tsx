@@ -212,13 +212,14 @@ export default function BorrowerDetailClient() {
         <p className="text-sm text-ink-soft italic">{t("detail_noLoans")}</p>
       ) : (
         <div className="space-y-6">
-          {loans.map((loan) => (
+          {loans.map((loan, index) => (
             <LoanCard
               key={loan.id}
               loan={loan}
               locale={locale}
               t={t}
               borrowerHasOpenLoan={hasOpenLoan}
+              isLatest={index === 0}
             />
           ))}
         </div>
@@ -232,11 +233,13 @@ function LoanCard({
   locale,
   t,
   borrowerHasOpenLoan,
+  isLatest,
 }: {
   loan: LoanWithRepayments;
   locale: string;
   t: (key: TranslationKey) => string;
   borrowerHasOpenLoan: boolean;
+  isLatest: boolean;
 }) {
   const searchParams = useSearchParams();
   const [showRepayForm, setShowRepayForm] = useState(
@@ -391,7 +394,7 @@ function LoanCard({
       )}
 
       <div className="px-4 py-3 bg-paper space-y-3">
-        {outstanding <= 0 && !borrowerHasOpenLoan && (
+        {isLatest && outstanding <= 0 && !borrowerHasOpenLoan && (
           <RenewLoanPrompt settledLoan={loan} />
         )}
         {!showRepayForm ? (

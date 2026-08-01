@@ -209,11 +209,11 @@ export default function ImportWizard() {
   function downloadSampleCsv() {
     const header =
       kind === "loans"
-        ? "Name,Name (Tamil),Amount,Interest Rate,Installments,Display Order,Schedule,Date Given,Notes"
+        ? "Name,Name (Tamil),Amount,Interest Rate,Installments,Display Order,Phone,Schedule,Date Given,Notes"
         : "Name,Amount,Mode,Date Paid";
     const sample =
       kind === "loans"
-        ? "Ramesh Kumar,,10000,25,10,1,Daily,2026-07-01,"
+        ? "Ramesh Kumar,,10000,25,10,1,9876543210,Daily,2026-07-01,"
         : "Ramesh Kumar,500,Cash,2026-07-15";
     const csv = `${header}\n${sample}\n`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

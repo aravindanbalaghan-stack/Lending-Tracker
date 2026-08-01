@@ -188,10 +188,10 @@ export const dictionary = {
     backup_subtitle:
       "Download all your borrowers, loans, and repayment history — keep a copy for yourself, or move to another system.",
     backup_loanCount: "loans on record",
-    backup_downloadCsv: "Download CSV",
+    backup_downloadCsv: "Download CSV (re-importable)",
     backup_downloadJson: "Download JSON (full backup)",
     backup_hint:
-      "CSV is best for opening in Excel. JSON keeps every detail exactly as stored and can be used to restore your data if needed.",
+      "The CSV is saved in the same format as Import, so you can load it back later via Import to restore your borrowers. JSON keeps every detail including repayment history.",
 
     newLoan_title: "New loan",
     newLoan_borrowerName: "Borrower name",
@@ -430,7 +430,7 @@ export const dictionary = {
     backup_subtitle:
       "உங்கள் அனைத்து கடன் வாங்குபவர்கள், கடன்கள் மற்றும் திருப்பிச் செலுத்திய வரலாற்றையும் பதிவிறக்கவும்.",
     backup_loanCount: "கடன்கள் பதிவில் உள்ளன",
-    backup_downloadCsv: "CSV பதிவிறக்கவும்",
+    backup_downloadCsv: "CSV பதிவிறக்கு (மீண்டும் ஏற்றக்கூடியது)",
     backup_downloadJson: "JSON பதிவிறக்கவும் (முழு காப்புப்பிரதி)",
     backup_hint:
       "Excel-இல் திறக்க CSV சிறந்தது. JSON ஒவ்வொரு விவரத்தையும் சேமிக்கப்பட்டுள்ளபடியே வைத்திருக்கும்.",

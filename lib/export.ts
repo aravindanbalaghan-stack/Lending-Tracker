@@ -2,10 +2,12 @@ export type BackupLoan = {
   id: string;
   borrower_name: string;
   borrower_name_ta: string | null;
+  phone: string | null;
   principal: number;
   interest_rate: number;
   payback_amount: number;
   installments_count: number;
+  display_order: number;
   collection_schedule: string;
   given_at: string;
   notes: string | null;
@@ -18,6 +20,42 @@ function csvEscape(value: string | number | null): string {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;
+}
+
+// Export in EXACTLY the column layout the import wizard expects, so a backup
+// file can be re-imported later to restore the borrowers. Column headers and
+// order match the import sample and its auto-detection.
+export function loansToImportCsv(loans: BackupLoan[]): string {
+  const header = [
+    "Name",
+    "Name (Tamil)",
+    "Amount",
+    "Interest Rate",
+    "Installments",
+    "Display Order",
+    "Phone",
+    "Schedule",
+    "Date Given",
+    "Notes",
+  ];
+
+  const rows = loans.map((loan) => [
+    loan.borrower_name,
+    loan.borrower_name_ta ?? "",
+    loan.principal,
+    loan.interest_rate,
+    loan.installments_count,
+    loan.display_order ?? 0,
+    loan.phone ?? "",
+    loan.collection_schedule,
+    loan.given_at.slice(0, 10),
+    loan.notes ?? "",
+  ]);
+
+  const lines = [header, ...rows].map((row) =>
+    row.map((cell) => csvEscape(cell)).join(",")
+  );
+  return lines.join("\n") + "\n";
 }
 
 export function loansToCsv(loans: BackupLoan[]): string {

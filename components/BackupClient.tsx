@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { loansToCsv, loansToJson, downloadTextFile, type BackupLoan } from "@/lib/export";
+import { loansToImportCsv, loansToJson, downloadTextFile, type BackupLoan } from "@/lib/export";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useLocalData } from "@/lib/offline/useLocalData";
 import { getCurrentUserId } from "@/lib/offline/actions";
@@ -26,10 +26,12 @@ export default function BackupClient() {
       id: l.id,
       borrower_name: l.borrower_name,
       borrower_name_ta: l.borrower_name_ta,
+      phone: l.phone,
       principal: Number(l.principal),
       interest_rate: Number(l.interest_rate),
       payback_amount: Number(l.payback_amount),
       installments_count: l.installments_count,
+      display_order: l.display_order ?? 0,
       collection_schedule: l.collection_schedule,
       given_at: l.given_at,
       notes: l.notes,
@@ -43,7 +45,7 @@ export default function BackupClient() {
   }
 
   function handleCsv() {
-    const csv = loansToCsv(loans);
+    const csv = loansToImportCsv(loans);
     downloadTextFile(
       `kanakku-book-backup-${new Date().toISOString().slice(0, 10)}.csv`,
       csv,

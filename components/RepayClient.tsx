@@ -108,7 +108,6 @@ export default function RepayClient() {
         onChange={(e) => setQuery(e.target.value)}
         placeholder={t("borrowers_searchPlaceholder")}
         className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm mb-6 focus:outline-none focus:ring-2 focus:ring-forest bg-white"
-        autoFocus
       />
 
       {!hasResults ? (
