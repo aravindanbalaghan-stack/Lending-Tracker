@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { dateKey } from "@/lib/calculations";
 import { WEEKDAYS, scheduleGroup, type ScheduleGroup } from "@/lib/schedule";
@@ -36,7 +35,6 @@ const TABS: { key: ScheduleGroup; labelKey: TranslationKey }[] = [
 export default function BorrowersClient() {
   const { lang, t } = useLanguage();
   const { loans, repayments, settings, loading } = useLocalData();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<ScheduleGroup>("daily");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -136,17 +134,6 @@ export default function BorrowersClient() {
       display_order: index,
     }));
     await reorderLoansOffline(orders);
-  }
-
-  function handleRepay(loanId: string) {
-    // Take the user into the borrower's page with the repayment form open,
-    // so the swipe "Repay" leads straight into recording a payment.
-    const entry = entries.find((e) => e.loanId === loanId);
-    if (entry) {
-      router.push(
-        `/borrowers/${encodeURIComponent(entry.name)}?repay=${loanId}`
-      );
-    }
   }
 
   if (loading) return <SkeletonList rows={6} />;
@@ -253,7 +240,6 @@ export default function BorrowersClient() {
                 }))}
                 t={t}
                 onReorder={(orderedIds) => handleReorder(orderedIds)}
-                onRepay={handleRepay}
               />
             </div>
           ))}

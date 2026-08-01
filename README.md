@@ -7,6 +7,20 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Offline repay fix — inline, no navigation (latest)
+
+The swipe-to-Repay on the Borrowers list previously NAVIGATED to the
+borrower's page to record a payment. Offline, that page often wasn't cached,
+so the swipe reloaded the same list or did nothing — unreliable exactly when
+a lender is in the field without signal.
+
+Now swiping Repay opens the repayment form **inline, right below the row** —
+no page load, no navigation. Recording a payment works identically online and
+offline because nothing needs to be fetched. (The Delayed tab already worked
+this way; this brings Borrowers in line.)
+
+No database migration is needed for this update.
+
 ## Offline bug fixes (latest)
 
 Fixes four offline problems found in testing:

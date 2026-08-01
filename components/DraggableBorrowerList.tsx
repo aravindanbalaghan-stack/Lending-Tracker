@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatINR } from "@/lib/calculations";
 import type { TranslationKey } from "@/lib/i18n";
 import SwipeableRow from "@/components/SwipeableRow";
+import RepaymentQuickForm from "@/components/RepaymentQuickForm";
 
 export type DraggableEntry = {
   loanId: string;
@@ -23,15 +24,16 @@ export default function DraggableBorrowerList({
   entries,
   t,
   onReorder,
-  onRepay,
 }: {
   entries: DraggableEntry[];
   t: (key: TranslationKey) => string;
   onReorder: (orderedIds: string[]) => void;
-  onRepay: (loanId: string) => void;
 }) {
   const [order, setOrder] = useState<string[]>(entries.map((e) => e.loanId));
   const [dragging, setDragging] = useState<string | null>(null);
+  // Which loan's repayment form is open inline. Recording a payment happens
+  // right here in the list — NO navigation — so it works identically offline.
+  const [repayOpenId, setRepayOpenId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // Keep local order in sync if the parent data changes (e.g. after sync)
@@ -79,17 +81,17 @@ export default function DraggableBorrowerList({
       className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden"
     >
       {ordered.map((e) => (
-        <div
-          key={e.loanId}
-          draggable
-          onDragStart={() => handleDragStart(e.loanId)}
-          onDragEnter={() => handleDragEnterRow(e.loanId)}
-          onDragEnd={handleDrop}
-          onDragOver={(ev) => ev.preventDefault()}
-          className={`flex items-center gap-2 px-3 transition ${
-            dragging === e.loanId ? "bg-paper opacity-60" : "hover:bg-paper"
-          }`}
-        >
+        <div key={e.loanId}>
+          <div
+            draggable
+            onDragStart={() => handleDragStart(e.loanId)}
+            onDragEnter={() => handleDragEnterRow(e.loanId)}
+            onDragEnd={handleDrop}
+            onDragOver={(ev) => ev.preventDefault()}
+            className={`flex items-center gap-2 px-3 transition ${
+              dragging === e.loanId ? "bg-paper opacity-60" : "hover:bg-paper"
+            }`}
+          >
           {/* Drag handle */}
           <span
             className="cursor-grab active:cursor-grabbing text-ink-soft select-none touch-none px-1"
@@ -124,7 +126,10 @@ export default function DraggableBorrowerList({
                       {
                         label: t("repay_action"),
                         color: "bg-forest",
-                        onClick: () => onRepay(e.loanId),
+                        onClick: () =>
+                          setRepayOpenId(
+                            repayOpenId === e.loanId ? null : e.loanId
+                          ),
                       },
                     ]
                   : []
@@ -168,6 +173,22 @@ export default function DraggableBorrowerList({
               </Link>
             </SwipeableRow>
           </div>
+          </div>
+
+          {/* Inline repayment form — opens in place, no navigation, so it
+              works identically online and offline. */}
+          {repayOpenId === e.loanId && (
+            <div className="px-3 pb-3 pt-1 bg-paper">
+              <p className="text-xs text-ink-soft mb-2">
+                {t("repay_action")}: {e.name}
+              </p>
+              <RepaymentQuickForm
+                loanId={e.loanId}
+                onSaved={() => setRepayOpenId(null)}
+                onCancel={() => setRepayOpenId(null)}
+              />
+            </div>
+          )}
         </div>
       ))}
     </div>
