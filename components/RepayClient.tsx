@@ -250,15 +250,16 @@ function ResultGroup({
               >
                 ⠿
               </span>
-              <p className="text-sm text-ink font-medium flex-1 min-w-0 truncate">
-                {loan.borrower_name}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-ink font-medium break-words">
+                  {loan.borrower_name}
+                </p>
                 {loan.borrower_name_ta && (
-                  <span className="text-ink-soft font-normal">
-                    {" "}
-                    · {loan.borrower_name_ta}
-                  </span>
+                  <p className="text-sm text-ink-soft font-normal break-words">
+                    {loan.borrower_name_ta}
+                  </p>
                 )}
-              </p>
+              </div>
               <div className="text-right shrink-0">
                 <p className="tabular text-sm text-rust">
                   {formatINR(loan.outstanding)}

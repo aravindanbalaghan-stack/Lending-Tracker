@@ -5,6 +5,7 @@ import {
   isPinEnabled,
   isUnlockedThisSession,
   markUnlocked,
+  touchActivity,
   verifyPin,
 } from "@/lib/pinLock";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -23,6 +24,36 @@ export default function PinLock({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time lock check on mount
     setLocked(needsLock);
     setChecked(true);
+
+    if (!isPinEnabled()) return;
+
+    // While the app is open and unlocked, record activity periodically so the
+    // 1-hour idle window is measured from the last time it was actually used.
+    const activity = setInterval(() => {
+      if (isPinEnabled() && isUnlockedThisSession()) {
+        touchActivity();
+      }
+    }, 60 * 1000);
+
+    // When the app is brought back to the foreground (or the tab regains
+    // focus), re-check whether the idle window has elapsed. If it has, lock.
+    const recheck = () => {
+      if (document.visibilityState === "visible") {
+        if (isPinEnabled() && !isUnlockedThisSession()) {
+          setLocked(true);
+        } else if (isPinEnabled() && isUnlockedThisSession()) {
+          touchActivity();
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", recheck);
+    window.addEventListener("focus", recheck);
+
+    return () => {
+      clearInterval(activity);
+      document.removeEventListener("visibilitychange", recheck);
+      window.removeEventListener("focus", recheck);
+    };
   }, []);
 
   async function submit(pin: string) {

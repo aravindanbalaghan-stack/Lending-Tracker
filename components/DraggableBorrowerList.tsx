@@ -153,12 +153,14 @@ export default function DraggableBorrowerList({
                   }}
                   className="flex-1 min-w-0 text-left"
                 >
-                  <span className="block text-sm text-ink font-medium truncate">
+                  <span className="block text-sm text-ink font-medium break-words">
                     {e.name}
-                    {e.nameTa && (
-                      <span className="text-ink-soft font-normal"> · {e.nameTa}</span>
-                    )}
                   </span>
+                  {e.nameTa && (
+                    <span className="block text-sm text-ink-soft font-normal break-words">
+                      {e.nameTa}
+                    </span>
+                  )}
                   <span className="block text-xs text-ink-soft">
                     {t("borrowers_given")} {formatINR(e.principal)}
                   </span>

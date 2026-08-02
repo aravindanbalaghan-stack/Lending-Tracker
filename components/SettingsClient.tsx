@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ensureLocalDataMatchesUser } from "@/lib/offline/db";
 import { getLastBackup } from "@/lib/lastBackup";
 import DeletedRecords from "@/components/DeletedRecords";
+import OutstandingSummary from "@/components/OutstandingSummary";
 import PinSettings from "@/components/PinSettings";
 import { useTheme } from "@/components/ThemeProvider";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -58,6 +59,8 @@ export default function SettingsClient() {
         </p>
         <p className="text-sm text-ink break-all">{email ?? "…"}</p>
       </div>
+
+      <OutstandingSummary />
 
       {/* Data */}
       <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line mb-4 overflow-hidden">

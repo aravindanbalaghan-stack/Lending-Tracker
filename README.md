@@ -7,6 +7,35 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Stricter PIN behavior (latest)
+
+The PIN now distinguishes two cases:
+- **Fresh app launch (cold start)** → always asks for the PIN, even if the app
+  was used moments earlier. This is the secure default.
+- **Backgrounding within the same run** → 1-hour grace: switching away and
+  returning within an hour skips the PIN; after an hour it locks.
+
+This is implemented with two signals — a per-run session flag (cleared on true
+app close) plus a last-active timestamp — so a closed-and-reopened app always
+prompts, while quick app-switching stays convenient.
+
+No database migration is needed for this update.
+
+## Name display, outstanding in settings, smarter PIN (latest)
+
+1. **Tamil names no longer truncated** — borrower names in the Borrowers and
+   Repay lists now wrap and show in full, with the Tamil name on its own line
+   instead of being cut off with an ellipsis.
+2. **Total outstanding in Settings** — a collapsible "Total outstanding" field
+   in Settings; tap it to reveal the total balance due across all active loans
+   (and how many loans have a balance). Computed from local data, works offline.
+3. **PIN only after 1 hour idle** — instead of asking for the PIN on every
+   open, it's now required only if the app has been away/idle for more than an
+   hour. Reopening within the hour skips the PIN; the idle timer is measured
+   from last activity and re-checked when the app returns to the foreground.
+
+No database migration is needed for this update.
+
 ## Offline borrower detail page (latest)
 
 Fixes two issues that shared one root cause — the borrower detail page
