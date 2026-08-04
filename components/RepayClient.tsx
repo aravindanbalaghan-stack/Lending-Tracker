@@ -26,6 +26,8 @@ export default function RepayClient() {
     useLocalData();
   const [query, setQuery] = useState("");
   const [openLoanId, setOpenLoanId] = useState<string | null>(null);
+  // Filter by collection schedule: "all", "Daily", "Monthly", or a weekday.
+  const [scheduleFilter, setScheduleFilter] = useState<string>("all");
 
   const loans: RepayLoan[] = useMemo(() => {
     const paidByLoanId = new Map<string, number>();
@@ -55,13 +57,19 @@ export default function RepayClient() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return loans;
-    return loans.filter(
-      (l) =>
+    return loans.filter((l) => {
+      // Schedule filter: "all" shows everything; otherwise match the exact
+      // schedule tag (Daily / Monthly / a specific weekday).
+      if (scheduleFilter !== "all" && l.collection_schedule !== scheduleFilter) {
+        return false;
+      }
+      if (!q) return true;
+      return (
         l.borrower_name.toLowerCase().includes(q) ||
         (l.borrower_name_ta ?? "").toLowerCase().includes(q)
-    );
-  }, [loans, query]);
+      );
+    });
+  }, [loans, query, scheduleFilter]);
 
   // Segregate: Daily section, one section per weekday (Weekly), Monthly section.
   const sections = useMemo(() => {
@@ -103,12 +111,29 @@ export default function RepayClient() {
         <p className="text-sm text-ink-soft mb-4">{t("repay_subtitle")}</p>
       </div>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={t("borrowers_searchPlaceholder")}
-        className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm mb-6 focus:outline-none focus:ring-2 focus:ring-forest bg-white"
-      />
+      <div className="flex gap-2 mb-6">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("borrowers_searchPlaceholder")}
+          className="flex-1 min-w-0 rounded-md border border-ledger-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest bg-white"
+        />
+        <select
+          value={scheduleFilter}
+          onChange={(e) => setScheduleFilter(e.target.value)}
+          className="shrink-0 rounded-md border border-ledger-line px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest"
+          aria-label={t("repay_filterBy")}
+        >
+          <option value="all">{t("repay_filterAll")}</option>
+          <option value="Daily">{t("schedule_Daily")}</option>
+          <option value="Monthly">{t("schedule_Monthly")}</option>
+          {WEEKDAYS.map((day) => (
+            <option key={day} value={day}>
+              {t(`schedule_${day}` as TranslationKey)}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {!hasResults ? (
         <div className="rounded-lg border border-dashed border-ledger-line p-8 text-center">

@@ -245,6 +245,8 @@ export const dictionary = {
     schedule_Sunday: "Sunday",
     schedule_Daily: "Daily",
     schedule_Monthly: "Monthly",
+    repay_filterBy: "Filter by schedule",
+    repay_filterAll: "All",
   },
   ta: {
     appName: "கணக்கு Book",
@@ -490,6 +492,8 @@ export const dictionary = {
     schedule_Sunday: "ஞாயிறு",
     schedule_Daily: "தினசரி",
     schedule_Monthly: "மாதாந்திரம்",
+    repay_filterBy: "அட்டவணை வடிகட்டி",
+    repay_filterAll: "அனைத்தும்",
   },
 } as const;
 

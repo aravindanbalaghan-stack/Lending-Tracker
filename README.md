@@ -7,6 +7,15 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Quick Payment schedule filter (latest)
+
+Added a dropdown at the top of the Quick Payment (Repay) tab to filter
+borrowers by collection schedule: All, Daily, Monthly, or a specific weekday
+(Monday–Sunday). Selecting one shows only the borrowers on that schedule,
+alongside the existing name search.
+
+No database migration is needed for this update.
+
 ## Interaction changes + renewal ordering (latest)
 
 1. **Swipe removed** from Borrowers and Delayed (Nippu Varavu). Recording a
