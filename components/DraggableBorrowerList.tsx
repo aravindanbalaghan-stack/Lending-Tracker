@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { formatINR } from "@/lib/calculations";
 import type { TranslationKey } from "@/lib/i18n";
-import SwipeableRow from "@/components/SwipeableRow";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
 
 export type DraggableEntry = {
@@ -119,86 +118,67 @@ export default function DraggableBorrowerList({
           </span>
 
           <div className="flex-1 min-w-0">
-            <SwipeableRow
-              actions={
-                e.outstanding > 0
-                  ? [
-                      {
-                        label: t("repay_action"),
-                        color: "bg-forest",
-                        onClick: () =>
-                          setRepayOpenId(
-                            repayOpenId === e.loanId ? null : e.loanId
-                          ),
-                      },
-                    ]
-                  : []
-              }
+            <div
+              data-loan-id={e.loanId}
+              className="flex items-center justify-between min-w-0 py-3 pr-2"
             >
-              <div
-                data-loan-id={e.loanId}
-                className="flex items-center justify-between min-w-0 py-3 pr-2"
+              {/* Tapping the name/body opens the borrower's loan details. */}
+              <Link
+                href={`/borrowers/${encodeURIComponent(e.name)}`}
+                className="flex-1 min-w-0 text-left"
+                aria-label={`${e.name} details`}
               >
-                {/* Tapping the borrower body records a payment inline (the
-                    primary field action). No navigation, so it's identical
-                    online and offline. Settled loans just show details. */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (e.outstanding > 0) {
+                <span className="block text-sm text-ink font-medium break-words">
+                  {e.name}
+                </span>
+                {e.nameTa && (
+                  <span className="block text-sm text-ink-soft font-normal break-words">
+                    {e.nameTa}
+                  </span>
+                )}
+                <span className="block text-xs text-ink-soft">
+                  {t("borrowers_given")} {formatINR(e.principal)}
+                </span>
+              </Link>
+
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                {e.phone && (
+                  <a
+                    href={`tel:${e.phone}`}
+                    onClick={(ev) => ev.stopPropagation()}
+                    className="text-forest text-base"
+                    aria-label={`Call ${e.name}`}
+                  >
+                    📞
+                  </a>
+                )}
+                <span
+                  className={`tabular text-sm ${
+                    e.outstanding > 0 ? "text-rust" : "text-forest"
+                  }`}
+                >
+                  {e.outstanding > 0
+                    ? `${formatINR(e.outstanding)} ${t("borrowers_due")}`
+                    : t("borrowers_settled")}
+                </span>
+                {/* The arrow now records a payment inline (only when there's an
+                    outstanding balance). Settled loans show no arrow. */}
+                {e.outstanding > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
                       setRepayOpenId(
                         repayOpenId === e.loanId ? null : e.loanId
-                      );
+                      )
                     }
-                  }}
-                  className="flex-1 min-w-0 text-left"
-                >
-                  <span className="block text-sm text-ink font-medium break-words">
-                    {e.name}
-                  </span>
-                  {e.nameTa && (
-                    <span className="block text-sm text-ink-soft font-normal break-words">
-                      {e.nameTa}
-                    </span>
-                  )}
-                  <span className="block text-xs text-ink-soft">
-                    {t("borrowers_given")} {formatINR(e.principal)}
-                  </span>
-                </button>
-
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  {e.phone && (
-                    <a
-                      href={`tel:${e.phone}`}
-                      onClick={(ev) => ev.stopPropagation()}
-                      className="text-forest text-base"
-                      aria-label={`Call ${e.name}`}
-                    >
-                      📞
-                    </a>
-                  )}
-                  <span
-                    className={`tabular text-sm ${
-                      e.outstanding > 0 ? "text-rust" : "text-forest"
-                    }`}
-                  >
-                    {e.outstanding > 0
-                      ? `${formatINR(e.outstanding)} ${t("borrowers_due")}`
-                      : t("borrowers_settled")}
-                  </span>
-                  {/* Explicit link to the full borrower page. This is the ONLY
-                      navigation on the row, so tapping the body never
-                      accidentally navigates. */}
-                  <Link
-                    href={`/borrowers/${encodeURIComponent(e.name)}`}
-                    className="text-ink-soft text-lg px-1 leading-none"
-                    aria-label={`${e.name} details`}
+                    className="text-forest text-lg px-1 leading-none"
+                    aria-label={`${t("repay_action")}: ${e.name}`}
                   >
                     ›
-                  </Link>
-                </div>
+                  </button>
+                )}
               </div>
-            </SwipeableRow>
+            </div>
           </div>
           </div>
 

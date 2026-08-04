@@ -8,7 +8,6 @@ import { findDelayedLoans } from "@/lib/delayed";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
-import SwipeableRow from "@/components/SwipeableRow";
 import RenewLoanPrompt from "@/components/RenewLoanPrompt";
 import { useLocalData } from "@/lib/offline/useLocalData";
 import { SkeletonList } from "@/components/Skeletons";
@@ -98,19 +97,7 @@ export default function DelayedClient() {
               <div className="rounded-lg border border-ledger-line bg-white divide-y divide-ledger-line overflow-hidden">
                 {items.map((loan) => (
                   <div key={loan.id} className="relative">
-                    <SwipeableRow
-                      actions={[
-                        {
-                          label: t("repay_action"),
-                          color: "bg-forest",
-                          onClick: () =>
-                            setOpenLoanId(
-                              openLoanId === loan.id ? null : loan.id
-                            ),
-                        },
-                      ]}
-                    >
-                      <div className="px-4 py-3">
+                    <div className="px-4 py-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <Link
@@ -165,7 +152,6 @@ export default function DelayedClient() {
                           </div>
                         )}
                       </div>
-                    </SwipeableRow>
                   </div>
                 ))}
               </div>

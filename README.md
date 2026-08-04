@@ -7,6 +7,22 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Interaction changes + renewal ordering (latest)
+
+1. **Swipe removed** from Borrowers and Delayed (Nippu Varavu). Recording a
+   payment is now via a tap, not a swipe.
+2. **Reversed tap behavior in Borrowers:** tapping the borrower NAME now opens
+   the loan details; tapping the "›" arrow opens the inline repayment form.
+   (The arrow only appears when there's an outstanding balance.)
+3. **Renewed loans keep their position in Repay.** Previously, a new loan
+   opened after settling the old one jumped to the top of the Quick Payments
+   list (its order defaulted to 0). Now a new loan for an existing borrower
+   inherits that borrower's previous position, so they stay where they were.
+4. Settled loans continue to appear under their date in Borrowers (this was
+   already the behavior; confirmed and unchanged).
+
+No database migration is needed for this update.
+
 ## Stricter PIN behavior (latest)
 
 The PIN now distinguishes two cases:

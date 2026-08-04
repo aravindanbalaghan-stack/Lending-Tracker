@@ -106,12 +106,41 @@ export async function createLoanOffline(
   if (!userId) return { ok: false, error: "You must be signed in." };
 
   const { display_order, ...rest } = input;
+
+  // If this borrower already had a loan (e.g. a renewal after settling the
+  // previous one), reuse that loan's positions so the borrower stays in the
+  // SAME place in the Borrowers and Repay lists instead of jumping to the top.
+  // Only fall back to the provided/default order when there's no prior loan.
+  let inheritedDisplayOrder: number | undefined;
+  let inheritedRepayOrder: number | undefined;
+  try {
+    const existing = await getAllLoans();
+    const sameBorrower = existing
+      .filter(
+        (l) =>
+          l.borrower_name.trim().toLowerCase() ===
+          rest.borrower_name.trim().toLowerCase()
+      )
+      // Most recently given first, to inherit the latest known position.
+      .sort(
+        (a, b) =>
+          new Date(b.given_at).getTime() - new Date(a.given_at).getTime()
+      );
+    if (sameBorrower.length > 0) {
+      inheritedDisplayOrder = sameBorrower[0].display_order ?? 0;
+      inheritedRepayOrder = sameBorrower[0].repay_display_order ?? 0;
+    }
+  } catch {
+    // best-effort; fall back to defaults below
+  }
+
   const loan: LoanRecord = {
     id: crypto.randomUUID(),
     lender_id: userId,
     deleted_at: null,
-    display_order: display_order ?? 0,
-    repay_display_order: display_order ?? 0,
+    display_order: inheritedDisplayOrder ?? display_order ?? 0,
+    repay_display_order:
+      inheritedRepayOrder ?? display_order ?? 0,
     phone: null,
     ...rest,
   };
