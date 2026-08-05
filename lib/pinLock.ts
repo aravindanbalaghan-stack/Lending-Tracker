@@ -13,6 +13,8 @@ const PIN_KEY = "kanakku-pin";
 const PIN_ENABLED_KEY = "kanakku-pin-enabled";
 const PIN_LAST_ACTIVE_KEY = "kanakku-pin-last-active"; // localStorage timestamp
 const PIN_SESSION_KEY = "kanakku-pin-session"; // sessionStorage: same run?
+const PIN_QUESTION_KEY = "kanakku-pin-question"; // security question (plain)
+const PIN_RECOVERY_KEY = "kanakku-pin-recovery"; // PIN encrypted with the answer
 
 // How long the app can be backgrounded/idle before the PIN is required again.
 const LOCK_AFTER_MS = 60 * 60 * 1000; // 1 hour
@@ -25,6 +27,64 @@ async function hashPin(pin: string): Promise<string> {
     .join("");
 }
 
+// ---- Recovery via security question -------------------------------------
+// To let a user recover a forgotten PIN, the PIN must be retrievable — but we
+// never store it in plain text. Instead we encrypt it with a key derived from
+// the security answer. Only the correct answer can decrypt it; a wrong answer
+// simply fails to decrypt. This keeps the "show my PIN" feature possible
+// without leaving the PIN readable on the device.
+
+function toB64(bytes: Uint8Array): string {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s);
+}
+function fromB64(b64: string): Uint8Array {
+  const s = atob(b64);
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+}
+
+async function deriveKeyFromAnswer(answer: string): Promise<CryptoKey> {
+  // Normalize so "Blue " and "blue" match — answers are case/space-insensitive.
+  const normalized = answer.trim().toLowerCase();
+  const enc = new TextEncoder();
+  const material = await crypto.subtle.importKey(
+    "raw",
+    enc.encode("kanakku-recovery:" + normalized),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: enc.encode("kanakku-recovery-salt"),
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptPinWithAnswer(
+  pin: string,
+  answer: string
+): Promise<string> {
+  const key = await deriveKeyFromAnswer(answer);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    new TextEncoder().encode(pin)
+  );
+  return JSON.stringify({ iv: toB64(iv), ct: toB64(new Uint8Array(ct)) });
+}
+
 export function isPinEnabled(): boolean {
   try {
     return localStorage.getItem(PIN_ENABLED_KEY) === "1";
@@ -33,11 +93,62 @@ export function isPinEnabled(): boolean {
   }
 }
 
-export async function setPin(pin: string): Promise<void> {
+export function hasSecurityQuestion(): boolean {
+  try {
+    return (
+      !!localStorage.getItem(PIN_QUESTION_KEY) &&
+      !!localStorage.getItem(PIN_RECOVERY_KEY)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function getSecurityQuestion(): string | null {
+  try {
+    return localStorage.getItem(PIN_QUESTION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+// Recover the PIN by answering the security question. Returns the PIN string
+// on the correct answer, or null if the answer is wrong (decryption fails).
+export async function recoverPinWithAnswer(
+  answer: string
+): Promise<string | null> {
+  try {
+    const raw = localStorage.getItem(PIN_RECOVERY_KEY);
+    if (!raw) return null;
+    const { iv, ct } = JSON.parse(raw);
+    const key = await deriveKeyFromAnswer(answer);
+    const ivBytes = fromB64(iv);
+    const ctBytes = fromB64(ct);
+    const pt = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: ivBytes as BufferSource },
+      key,
+      ctBytes as BufferSource
+    );
+    return new TextDecoder().decode(pt);
+  } catch {
+    // Wrong answer → AES-GCM auth tag mismatch → decrypt throws.
+    return null;
+  }
+}
+
+export async function setPin(
+  pin: string,
+  security?: { question: string; answer: string }
+): Promise<void> {
   const hash = await hashPin(pin);
   try {
     localStorage.setItem(PIN_KEY, hash);
     localStorage.setItem(PIN_ENABLED_KEY, "1");
+    if (security && security.question.trim() && security.answer.trim()) {
+      const encrypted = await encryptPinWithAnswer(pin, security.answer);
+      localStorage.setItem(PIN_QUESTION_KEY, security.question.trim());
+      localStorage.setItem(PIN_RECOVERY_KEY, encrypted);
+    }
   } catch {
     // ignore
   }
@@ -48,6 +159,8 @@ export function disablePin(): void {
     localStorage.removeItem(PIN_KEY);
     localStorage.removeItem(PIN_ENABLED_KEY);
     localStorage.removeItem(PIN_LAST_ACTIVE_KEY);
+    localStorage.removeItem(PIN_QUESTION_KEY);
+    localStorage.removeItem(PIN_RECOVERY_KEY);
     sessionStorage.removeItem(PIN_SESSION_KEY);
   } catch {
     // ignore

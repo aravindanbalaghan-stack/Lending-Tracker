@@ -14,6 +14,8 @@ export default function PinSettings() {
   const [setting, setSetting] = useState(false);
   const [pin, setPin] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -36,11 +38,17 @@ export default function PinSettings() {
       setError(t("pin_mismatch"));
       return;
     }
-    await savePin(pin);
+    if (!question.trim() || !answer.trim()) {
+      setError(t("pin_securityRequired"));
+      return;
+    }
+    await savePin(pin, { question: question.trim(), answer: answer.trim() });
     setEnabled(true);
     setSetting(false);
     setPin("");
     setConfirm("");
+    setQuestion("");
+    setAnswer("");
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
@@ -126,6 +134,30 @@ export default function PinSettings() {
               className="w-28 rounded-md border border-ledger-line px-3 py-2 text-lg tracking-[0.4em] text-center focus:outline-none focus:ring-2 focus:ring-forest"
             />
           </div>
+
+          <div className="pt-2 border-t border-ledger-line">
+            <p className="text-xs text-ink-soft mb-2">
+              {t("pin_securityIntro")}
+            </p>
+            <label className="block text-xs font-medium text-ink-soft mb-1">
+              {t("pin_securityQuestion")}
+            </label>
+            <input
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder={t("pin_securityQuestionPlaceholder")}
+              className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-forest"
+            />
+            <label className="block text-xs font-medium text-ink-soft mb-1">
+              {t("pin_securityAnswer")}
+            </label>
+            <input
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder={t("pin_securityAnswerPlaceholder")}
+              className="w-full rounded-md border border-ledger-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest"
+            />
+          </div>
           {error && <p className="text-sm text-rust">{error}</p>}
           <div className="flex gap-2">
             <button
@@ -140,6 +172,8 @@ export default function PinSettings() {
                 setError(null);
                 setPin("");
                 setConfirm("");
+                setQuestion("");
+                setAnswer("");
               }}
               className="text-xs text-ink-soft"
             >

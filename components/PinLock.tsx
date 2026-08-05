@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import {
+  getSecurityQuestion,
+  hasSecurityQuestion,
   isPinEnabled,
   isUnlockedThisSession,
   markUnlocked,
+  recoverPinWithAnswer,
   touchActivity,
   verifyPin,
 } from "@/lib/pinLock";
@@ -18,6 +21,11 @@ export default function PinLock({ children }: { children: React.ReactNode }) {
   const [locked, setLocked] = useState(false);
   const [entry, setEntry] = useState("");
   const [error, setError] = useState(false);
+  // Forgot-PIN recovery flow state.
+  const [recovering, setRecovering] = useState(false);
+  const [recoveryAnswer, setRecoveryAnswer] = useState("");
+  const [recoveredPin, setRecoveredPin] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] = useState(false);
 
   useEffect(() => {
     const needsLock = isPinEnabled() && !isUnlockedThisSession();
@@ -83,6 +91,16 @@ export default function PinLock({ children }: { children: React.ReactNode }) {
     setEntry((e) => e.slice(0, -1));
   }
 
+  async function submitRecovery() {
+    setRecoveryError(false);
+    const pin = await recoverPinWithAnswer(recoveryAnswer);
+    if (pin) {
+      setRecoveredPin(pin);
+    } else {
+      setRecoveryError(true);
+    }
+  }
+
   // Avoid a flash of the app before we've checked lock state.
   if (!checked) return null;
   if (!locked) return <>{children}</>;
@@ -140,6 +158,79 @@ export default function PinLock({ children }: { children: React.ReactNode }) {
           ⌫
         </button>
       </div>
+
+      {/* Forgot PIN — only offered if a security question was set. */}
+      {hasSecurityQuestion() && (
+        <button
+          onClick={() => {
+            setRecovering(true);
+            setRecoveryAnswer("");
+            setRecoveredPin(null);
+            setRecoveryError(false);
+          }}
+          className="mt-6 text-sm text-forest underline underline-offset-2"
+        >
+          {t("pin_forgot")}
+        </button>
+      )}
+
+      {/* Recovery overlay: answer the security question to reveal the PIN. */}
+      {recovering && (
+        <div className="fixed inset-0 z-[110] bg-paper flex flex-col items-center justify-center px-6">
+          {recoveredPin ? (
+            <>
+              <h1 className="font-serif text-xl text-ink mb-2">
+                {t("pin_yourPin")}
+              </h1>
+              <p className="tabular text-4xl font-semibold text-forest tracking-[0.3em] mb-6">
+                {recoveredPin}
+              </p>
+              <button
+                onClick={() => {
+                  setRecovering(false);
+                  setRecoveredPin(null);
+                }}
+                className="rounded-md bg-forest text-white px-6 py-2 text-sm font-medium"
+              >
+                {t("pin_gotIt")}
+              </button>
+            </>
+          ) : (
+            <>
+              <h1 className="font-serif text-xl text-ink mb-1">
+                {t("pin_forgotTitle")}
+              </h1>
+              <p className="text-sm text-ink-soft mb-4 text-center">
+                {getSecurityQuestion()}
+              </p>
+              <input
+                value={recoveryAnswer}
+                onChange={(e) => setRecoveryAnswer(e.target.value)}
+                placeholder={t("pin_securityAnswer")}
+                className="w-full max-w-xs rounded-md border border-ledger-line px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-forest bg-white"
+                autoFocus
+              />
+              {recoveryError && (
+                <p className="text-sm text-rust mb-2">{t("pin_wrongAnswer")}</p>
+              )}
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={submitRecovery}
+                  className="rounded-md bg-forest text-white px-5 py-2 text-sm font-medium"
+                >
+                  {t("pin_reveal")}
+                </button>
+                <button
+                  onClick={() => setRecovering(false)}
+                  className="px-4 py-2 text-sm text-ink-soft"
+                >
+                  {t("detail_cancel")}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

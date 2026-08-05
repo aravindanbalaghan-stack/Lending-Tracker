@@ -7,6 +7,23 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## PIN recovery via security question (latest)
+
+Setting a PIN now also requires a **security question and answer**. If the
+user forgets their PIN, the lock screen shows a "Forgot PIN?" link → they
+answer the security question → the correct answer reveals the PIN.
+
+Security design: the PIN is a one-way hash for normal unlocking, and is
+**additionally** stored encrypted (AES-GCM) with a key derived from the
+security answer. The answer is never stored; only the correct answer can
+decrypt and reveal the PIN, and a wrong answer simply fails. Answers are
+matched case- and space-insensitively.
+
+No database migration is needed for this update. Note: existing users who
+already set a PIN before this update won't have a security question yet —
+they'll need to re-set their PIN (Settings → App lock → Change) to add one.
+
+
 ## Quick Payment schedule filter (latest)
 
 Added a dropdown at the top of the Quick Payment (Repay) tab to filter
