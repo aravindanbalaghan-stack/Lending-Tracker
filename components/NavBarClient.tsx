@@ -22,6 +22,7 @@ const DESKTOP_LINKS: { href: string; labelKey: TranslationKey }[] = [
   { href: "/borrowers", labelKey: "nav_borrowers" },
   { href: "/repay", labelKey: "nav_repay" },
   { href: "/delayed", labelKey: "nav_delayed" },
+  { href: "/reports", labelKey: "nav_reports" },
   { href: "/missed", labelKey: "nav_missed" },
   { href: "/settings", labelKey: "nav_settings" },
 ];

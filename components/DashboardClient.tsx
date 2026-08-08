@@ -122,16 +122,24 @@ export default function DashboardClient() {
         <p className="text-sm text-ink-soft">{t("dashboard_subtitle")}</p>
       </div>
 
-      {/* Daily snapshot — the number a lender checks each morning. */}
+      {/* Daily snapshot — the number a lender checks each morning. Tapping it
+          opens the full business reports. */}
       <div>
-        <div className="rounded-xl bg-forest text-white p-4">
-          <p className="text-[11px] uppercase tracking-wide text-white/70">
-            {t("summary_collectedToday")}
-          </p>
-          <p className="tabular text-2xl font-semibold mt-1">
-            {formatINR(collectedToday)}
-          </p>
-        </div>
+        <Link href="/reports" className="block">
+          <div className="rounded-xl bg-forest text-white p-4 active:opacity-90 transition">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-wide text-white/70">
+                {t("summary_collectedToday")}
+              </p>
+              <span className="text-[11px] text-white/70">
+                {t("reports_viewReports")} ›
+              </span>
+            </div>
+            <p className="tabular text-2xl font-semibold mt-1">
+              {formatINR(collectedToday)}
+            </p>
+          </div>
+        </Link>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:items-start">

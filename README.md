@@ -7,6 +7,33 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Business reports / insights (latest)
+
+A new Reports page (/reports) gives lenders a business-health view the basic
+trackers don't offer:
+- **Money on the street** — total outstanding across active loans.
+- **Collected this month** — with an up/down comparison to last month.
+- **Expected profit** — payback minus principal on open loans.
+- **Lent this month** — plus total ever lent.
+- **Collections trend** — a daily (14-day) / monthly (6-month) bar chart.
+- **Follow-up list** — overdue borrowers ranked by how long since they last
+  paid (never-paid first), with balances.
+
+All computed from local data, so it works offline. Reachable from the green
+dashboard card ("View reports") and the desktop nav. Precached in the service
+worker for offline use.
+
+No database migration is needed for this update. Service worker cache bumped
+to v6 — open the app once online after deploying to pick it up.
+
+## Repay: tap name to record (latest)
+
+In the Quick Payment tab, tapping the borrower's name now opens the payment
+form directly, replacing the separate "Record" link. The row shows the
+outstanding amount and a subtle "Tap name to record" hint.
+
+No database migration is needed for this update.
+
 ## PIN recovery via security question (latest)
 
 Setting a PIN now also requires a **security question and answer**. If the

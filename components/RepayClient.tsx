@@ -275,7 +275,14 @@ function ResultGroup({
               >
                 ⠿
               </span>
-              <div className="flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenLoanId(openLoanId === loan.id ? null : loan.id)
+                }
+                className="flex-1 min-w-0 text-left"
+                aria-label={`${t("repay_action")}: ${loan.borrower_name}`}
+              >
                 <p className="text-sm text-ink font-medium break-words">
                   {loan.borrower_name}
                 </p>
@@ -284,19 +291,14 @@ function ResultGroup({
                     {loan.borrower_name_ta}
                   </p>
                 )}
-              </div>
+              </button>
               <div className="text-right shrink-0">
                 <p className="tabular text-sm text-rust">
                   {formatINR(loan.outstanding)}
                 </p>
-                <button
-                  onClick={() =>
-                    setOpenLoanId(openLoanId === loan.id ? null : loan.id)
-                  }
-                  className="text-xs text-forest font-medium underline underline-offset-2"
-                >
-                  {t("repay_action")}
-                </button>
+                <span className="text-xs text-ink-soft">
+                  {t("repay_tapToRecord")}
+                </span>
               </div>
             </div>
             {openLoanId === loan.id && (
