@@ -9,10 +9,17 @@ export default function RepaymentQuickForm({
   loanId,
   onSaved,
   onCancel,
+  outstandingBefore,
+  onSettled,
 }: {
   loanId: string;
   onSaved: () => void;
   onCancel?: () => void;
+  // When provided, if this payment clears the remaining balance we call
+  // onSettled instead of the normal onSaved, so the caller can offer to start
+  // a new loan for the borrower.
+  outstandingBefore?: number;
+  onSettled?: () => void;
 }) {
   const { t } = useLanguage();
   const [amount, setAmount] = useState("");
@@ -48,7 +55,17 @@ export default function RepaymentQuickForm({
 
     haptic(); // brief confirmation buzz on supported devices
     setAmount("");
-    onSaved();
+    // If this payment cleared the remaining balance, let the caller offer to
+    // start a new loan; otherwise proceed normally.
+    if (
+      outstandingBefore != null &&
+      onSettled &&
+      amountNum >= outstandingBefore - 0.01
+    ) {
+      onSettled();
+    } else {
+      onSaved();
+    }
   }
 
   return (

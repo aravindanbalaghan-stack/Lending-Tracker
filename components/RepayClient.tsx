@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { formatINR } from "@/lib/calculations";
 import { scheduleGroup, WEEKDAYS } from "@/lib/schedule";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { TranslationKey } from "@/lib/i18n";
 import RepaymentQuickForm from "@/components/RepaymentQuickForm";
+import RenewLoanPrompt from "@/components/RenewLoanPrompt";
 import { useLocalData } from "@/lib/offline/useLocalData";
 import { SkeletonList } from "@/components/Skeletons";
 import { reorderLoansOffline } from "@/lib/offline/actions";
@@ -26,8 +28,16 @@ export default function RepayClient() {
     useLocalData();
   const [query, setQuery] = useState("");
   const [openLoanId, setOpenLoanId] = useState<string | null>(null);
+  // When a payment settles a loan, we stash its id here to show a "start new
+  // loan?" prompt for that borrower.
+  const [settledLoanId, setSettledLoanId] = useState<string | null>(null);
   // Filter by collection schedule: "all", "Daily", "Monthly", or a weekday.
   const [scheduleFilter, setScheduleFilter] = useState<string>("all");
+
+  const settledLoanRecord = useMemo(
+    () => allLoans.find((l) => l.id === settledLoanId) ?? null,
+    [allLoans, settledLoanId]
+  );
 
   const loans: RepayLoan[] = useMemo(() => {
     const paidByLoanId = new Map<string, number>();
@@ -150,6 +160,7 @@ export default function RepayClient() {
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
               onSaved={() => setOpenLoanId(null)}
+              onSettled={(id) => { setOpenLoanId(null); setSettledLoanId(id); }}
               onReorder={handleReorder}
               t={t}
             />
@@ -162,6 +173,7 @@ export default function RepayClient() {
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
               onSaved={() => setOpenLoanId(null)}
+              onSettled={(id) => { setOpenLoanId(null); setSettledLoanId(id); }}
               onReorder={handleReorder}
               t={t}
             />
@@ -173,10 +185,36 @@ export default function RepayClient() {
               openLoanId={openLoanId}
               setOpenLoanId={setOpenLoanId}
               onSaved={() => setOpenLoanId(null)}
+              onSettled={(id) => { setOpenLoanId(null); setSettledLoanId(id); }}
               onReorder={handleReorder}
               t={t}
             />
           )}
+        </div>
+      )}
+
+      {/* When a payment clears a loan in full, offer to start a new loan for
+          the same borrower — right here, without leaving the Repay tab. */}
+      {settledLoanRecord && (
+        <div className="fixed inset-0 z-[90] bg-black/40 flex items-end md:items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-xl bg-paper p-4 shadow-lg">
+            <p className="text-sm text-ink font-medium mb-1">
+              {t("renew_settledTitle")}
+            </p>
+            <p className="text-xs text-ink-soft mb-3">
+              {settledLoanRecord.borrower_name} · {t("renew_settledDone")}
+            </p>
+            <RenewLoanPrompt
+              settledLoan={settledLoanRecord}
+              onDone={() => setSettledLoanId(null)}
+            />
+            <button
+              onClick={() => setSettledLoanId(null)}
+              className="mt-3 w-full text-center text-xs text-ink-soft py-2"
+            >
+              {t("renew_notNow")}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -189,6 +227,7 @@ function ResultGroup({
   openLoanId,
   setOpenLoanId,
   onSaved,
+  onSettled,
   onReorder,
   t,
 }: {
@@ -197,6 +236,7 @@ function ResultGroup({
   openLoanId: string | null;
   setOpenLoanId: (id: string | null) => void;
   onSaved: () => void;
+  onSettled: (loanId: string) => void;
   onReorder: (orderedIds: string[]) => void;
   t: (key: TranslationKey) => string;
 }) {
@@ -300,11 +340,20 @@ function ResultGroup({
                   {t("repay_tapToRecord")}
                 </span>
               </div>
+              <Link
+                href={`/borrowers/${encodeURIComponent(loan.borrower_name)}`}
+                className="text-ink-soft text-lg px-1 leading-none shrink-0"
+                aria-label={`${loan.borrower_name} details`}
+              >
+                ›
+              </Link>
             </div>
             {openLoanId === loan.id && (
               <div className="mt-3">
                 <RepaymentQuickForm
                   loanId={loan.id}
+                  outstandingBefore={loan.outstanding}
+                  onSettled={() => onSettled(loan.id)}
                   onSaved={onSaved}
                   onCancel={() => setOpenLoanId(null)}
                 />

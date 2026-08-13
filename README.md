@@ -7,6 +7,21 @@ A web app (mobile-friendly) for tracking money you've lent out: who you gave
 money to, the interest, what they owe back, and every repayment with a
 timestamp — plus a daily collections dashboard for the last 15 days.
 
+## Renew-on-completion + Repay details arrow (latest)
+
+1. **Start-new-loan prompt on full payment.** When a payment clears a loan in
+   full — whether recorded from the Repay tab or the Borrowers tab — a prompt
+   appears offering to start a new loan for that borrower (carrying over their
+   rate, schedule, and installments; just enter the new amount).
+2. **Renewed loans keep their place in Repay.** A new loan for an existing
+   borrower inherits that borrower's previous position, so they don't jump to
+   the top of the Quick Payment list. (Already implemented; confirmed it
+   applies to the renew flow.)
+3. **Details arrow in Repay.** Each borrower row in the Repay tab now has a
+   "›" arrow that opens the full borrower page (loan details and past loans).
+
+No database migration is needed for this update.
+
 ## Business reports / insights (latest)
 
 A new Reports page (/reports) gives lenders a business-health view the basic

@@ -23,10 +23,12 @@ export default function DraggableBorrowerList({
   entries,
   t,
   onReorder,
+  onSettled,
 }: {
   entries: DraggableEntry[];
   t: (key: TranslationKey) => string;
   onReorder: (orderedIds: string[]) => void;
+  onSettled?: (loanId: string) => void;
 }) {
   const [order, setOrder] = useState<string[]>(entries.map((e) => e.loanId));
   const [dragging, setDragging] = useState<string | null>(null);
@@ -191,6 +193,11 @@ export default function DraggableBorrowerList({
               </p>
               <RepaymentQuickForm
                 loanId={e.loanId}
+                outstandingBefore={e.outstanding}
+                onSettled={() => {
+                  setRepayOpenId(null);
+                  onSettled?.(e.loanId);
+                }}
                 onSaved={() => setRepayOpenId(null)}
                 onCancel={() => setRepayOpenId(null)}
               />

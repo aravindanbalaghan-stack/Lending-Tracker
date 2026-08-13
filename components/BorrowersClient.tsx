@@ -11,6 +11,7 @@ import { SkeletonList } from "@/components/Skeletons";
 import { findDelayedLoans, delayedLoanIdSet } from "@/lib/delayed";
 import { reorderLoansOffline } from "@/lib/offline/actions";
 import DraggableBorrowerList from "@/components/DraggableBorrowerList";
+import RenewLoanPrompt from "@/components/RenewLoanPrompt";
 
 type LoanEntry = {
   loanId: string;
@@ -38,6 +39,12 @@ export default function BorrowersClient() {
   const [activeTab, setActiveTab] = useState<ScheduleGroup>("daily");
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [settledLoanId, setSettledLoanId] = useState<string | null>(null);
+
+  const settledLoanRecord = useMemo(
+    () => loans.find((l) => l.id === settledLoanId) ?? null,
+    [loans, settledLoanId]
+  );
 
   const locale = lang === "ta" ? "ta-IN" : "en-IN";
 
@@ -260,9 +267,34 @@ export default function BorrowersClient() {
                 }))}
                 t={t}
                 onReorder={(orderedIds) => handleReorder(orderedIds)}
+                onSettled={(loanId) => setSettledLoanId(loanId)}
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Offer to start a new loan when a payment clears one in full. */}
+      {settledLoanRecord && (
+        <div className="fixed inset-0 z-[90] bg-black/40 flex items-end md:items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-xl bg-paper p-4 shadow-lg">
+            <p className="text-sm text-ink font-medium mb-1">
+              {t("renew_settledTitle")}
+            </p>
+            <p className="text-xs text-ink-soft mb-3">
+              {settledLoanRecord.borrower_name} · {t("renew_settledDone")}
+            </p>
+            <RenewLoanPrompt
+              settledLoan={settledLoanRecord}
+              onDone={() => setSettledLoanId(null)}
+            />
+            <button
+              onClick={() => setSettledLoanId(null)}
+              className="mt-3 w-full text-center text-xs text-ink-soft py-2"
+            >
+              {t("renew_notNow")}
+            </button>
+          </div>
         </div>
       )}
     </div>
